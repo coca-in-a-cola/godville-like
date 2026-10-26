@@ -4,7 +4,7 @@ import { GP_REGEN_INTERVAL_MS, requestIntervention } from './god.ts';
 import { blessItem, equipBest, inventoryCombatStats, inventoryMiracleEffects } from './inventory.ts';
 import { rollBp } from './rng.ts';
 import { createWorldClock, scaleRealToGame, type GameSpeed, type WorldClock } from './time.ts';
-import { advanceWorld, createWorld, enterWorldDeathInPlace, type GameData, type VoiceIntent, type WorldEvent, type WorldState, type WorldTuning } from './world.ts';
+import { advanceWorld, createWorld, enterWorldDeathInPlace, type AdvanceOptions, type WorldCombatEvent, type GameData, type VoiceIntent, type WorldEvent, type WorldState, type WorldTuning } from './world.ts';
 
 export type FaithUpgrade = 'capacity' | 'flow' | 'miracle' | 'clarity';
 /** Explicit prototype policy; saves pin levels, not caller-controlled rates/costs. */
@@ -78,13 +78,13 @@ function regenerate(s: SessionState, realMs: number): void {
   }
 }
 /** No elapsed cap. Hosts can yield between bounded calls; every carry survives each call. */
-export function advanceSession(state: SessionState, content: GameData, realMs: number, visibility: GameSpeed): { state: SessionState; events: WorldEvent[] } {
+export function advanceSession(state: SessionState, content: GameData, realMs: number, visibility: GameSpeed, options: AdvanceOptions = {}): { state: SessionState; events: WorldEvent[]; combatEvents?: WorldCombatEvent[] } {
   if ((visibility !== 'watched' && visibility !== 'unwatched') || !Number.isSafeInteger(realMs) || realMs < 0 || !Number.isSafeInteger(state.realElapsedMs + realMs) || !Number.isSafeInteger(realMs * 10 + state.clock.carry)) throw new RangeError('invalid real time budget');
   const s = clone(state);
   const scaled = scaleRealToGame(s.clock, realMs, visibility);
   regenerate(s, realMs); s.realElapsedMs += realMs; s.clock = scaled.clock;
-  const advanced = advanceWorld(s.world, content, scaled.gameMs); s.world = advanced.state;
-  return { state: s, events: advanced.events };
+  const advanced = advanceWorld(s.world, content, scaled.gameMs, options); s.world = advanced.state;
+  return { state: s, events: advanced.events, ...(advanced.combatEvents ? { combatEvents: advanced.combatEvents } : {}) };
 }
 function miracleStrength(s: SessionState, kind: 'blessing' | 'smite'): number {
   const effects = inventoryMiracleEffects(s.world.hero.inventory);

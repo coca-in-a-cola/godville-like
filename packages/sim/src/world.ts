@@ -1,5 +1,5 @@
 /** Autonomous hero domain. Content must be validated by the caller; no data loader lives here. */
-import { createFight, stepInPlace, TICK_MS, type FightState } from './fight.ts';
+import { createFight, stepInPlace, TICK_MS, type FightState, type FightEvent } from './fight.ts';
 import { estimateDuel } from './estimate.ts';
 import { createGodState, type GodState } from './god.ts';
 import { applyDeathLoss, emptyInventory, inventoryCombatStats, inventoryStats, perceivedPower, pickupGear, pickupTrophy, sellInTown, TROPHY_POUCH_CAPACITY, type Inventory, type HeroQuirks } from './inventory.ts';
@@ -77,7 +77,9 @@ export interface WorldState {
   diary: WorldEvent[]; tuning: WorldTuning;
   totals: { kills: number; deaths: number; quests: number; miles: number; fled: number };
 }
-export interface WorldAdvance { state: WorldState; /** Bounded newest events, just like diary. */ events: WorldEvent[] }
+export interface AdvanceOptions { collectCombatEvents?: boolean }
+export interface WorldCombatEvent { fightId: string; event: FightEvent }
+export interface WorldAdvance { state: WorldState; /** Bounded newest events, just like diary. */ events: WorldEvent[]; combatEvents?: WorldCombatEvent[] }
 function validateTuning(t: WorldTuning): void {
   for (const [key, value] of Object.entries(t)) {
     if (!Number.isFinite(value) || value < 0 || value > WORLD_RESOURCE_CAP) throw new RangeError(`invalid tuning ${key}`);
@@ -279,8 +281,14 @@ export function enterWorldDeathInPlace(s: WorldState, events: WorldEvent[]): voi
   delete s.voiceIntent; s.combat = null; s.hero.hp = 0;
   s.totals.deaths++; s.deathRemainingMs = s.tuning.deathMs; phase(s, events, 'dead');
 }
-function combat(s: WorldState, c: GameData, events: WorldEvent[]): void {
-  const active = s.combat!; const fight = active.fight; stepInPlace(fight, null); s.hero.hp = fight.hero.hp;
+function combat(s: WorldState, c: GameData, events: WorldEvent[], combatEvents?: WorldCombatEvent[]): void {
+  const active = s.combat!; const fight = active.fight;
+  const tickEvents: FightEvent[] | null = combatEvents ? [] : null;
+  stepInPlace(fight, tickEvents); s.hero.hp = fight.hero.hp;
+  if (combatEvents && tickEvents) {
+    for (const event of tickEvents) combatEvents.push({ fightId: active.monster.id, event });
+    if (combatEvents.length > 400) combatEvents.splice(0, combatEvents.length - 400);
+  }
   if (!fight.outcome && (s.voiceIntent === 'fight' || s.voiceIntent === 'flee')) {
     const intent = s.voiceIntent; delete s.voiceIntent;
     emit(s, events, { type: 'voice_effect', intent, amount: 0 });
@@ -308,16 +316,17 @@ function combat(s: WorldState, c: GameData, events: WorldEvent[]): void {
   phase(s, events, 'travel'); decideReturn(s, events);
 }
 /** Immutable boundary; the internal loop mutates only this JSON clone. No full combat logs retained. */
-export function advanceWorld(state: WorldState, content: GameData, gameMs: number): WorldAdvance {
+export function advanceWorld(state: WorldState, content: GameData, gameMs: number, options: AdvanceOptions = {}): WorldAdvance {
   if (!Number.isSafeInteger(gameMs) || gameMs < 0 || !Number.isSafeInteger(state.elapsedMs + state.pendingMs + gameMs)) throw new RangeError('invalid game time budget');
   const s = JSON.parse(JSON.stringify(state)) as WorldState; const events: WorldEvent[] = [];
+  const combatEvents: WorldCombatEvent[] | undefined = options.collectCombatEvents ? [] : undefined;
   let budget = s.pendingMs + gameMs;
   while (budget >= TICK_MS) {
     budget -= TICK_MS; s.elapsedMs += TICK_MS; s.phaseMs += TICK_MS;
     switch (s.phase) {
       case 'town': if (s.phaseMs >= s.tuning.townMs) serviceTown(s, content, events); break;
       case 'travel': travel(s, content, events); break;
-      case 'combat': combat(s, content, events); break;
+      case 'combat': combat(s, content, events, combatEvents); break;
       case 'return':
         s.travelCarryMs += TICK_MS;
         if (s.travelCarryMs >= s.tuning.stepMs) {
@@ -337,7 +346,7 @@ export function advanceWorld(state: WorldState, content: GameData, gameMs: numbe
         break;
     }
   }
-  s.pendingMs = budget; return { state: s, events };
+  s.pendingMs = budget; return { state: s, events, ...(combatEvents ? { combatEvents } : {}) };
 }
 /** Personality editing only: no direct movement or fake god controls. */
 export type WorldAction = { type: 'personality'; courage?: number; favoriteModifierId?: string | null };
