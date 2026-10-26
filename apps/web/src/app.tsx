@@ -1,4 +1,5 @@
 import type { Signal } from '@preact/signals';
+import { BalancePanel } from './BalancePanel.tsx';
 import {
   ATTACK_SPEED_CAP_BP,
   BAR_FULL,
@@ -301,6 +302,7 @@ export function App() {
         </div>
       </div>
       <Setup />
+      <BalancePanel />
     </main>
   );
 }
