@@ -1,3 +1,4 @@
+export * from './loot.ts';
 export {
   cloneRng,
   isUint32,
