@@ -1,0 +1,96 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`monster formulas and seeded content selection > pins a real seeded item and monster golden result 1`] = `
+{
+  "item": {
+    "item": {
+      "baseId": "ring",
+      "basePower": 80,
+      "baseStats": [
+        "regen",
+      ],
+      "blessingHealMultiplier": 1,
+      "godBlessed": false,
+      "id": "golden-item",
+      "level": 20,
+      "miracleMultiplier": 1,
+      "modifiers": [
+        {
+          "id": "fine",
+        },
+        {
+          "id": "of_precision",
+        },
+        {
+          "id": "of_justice",
+        },
+        {
+          "id": "blessed",
+        },
+        {
+          "id": "legendary",
+        },
+        {
+          "id": "shoddy",
+        },
+        {
+          "id": "legendary",
+        },
+        {
+          "id": "shoddy",
+        },
+      ],
+      "power": 265.20417,
+      "price": 530.40834,
+      "rarity": "purple",
+      "sellPrice": 159.12250199999997,
+      "shopPrice": 530.40834,
+      "slot": "ring",
+      "stats": {
+        "attackSpeed": 0,
+        "counter": 5.3361,
+        "crit": 16.0083,
+        "damageMax": 0,
+        "damageMin": 0,
+        "defense": 0,
+        "evasion": 0,
+        "maxHp": 0,
+        "regen": 4.80249,
+        "vampirism": 0,
+      },
+    },
+    "rng": {
+      "a": 2401152598,
+      "b": 2108636177,
+      "c": 2468733186,
+      "d": 2927996891,
+    },
+  },
+  "monster": {
+    "monster": {
+      "contentId": "battle_hamster",
+      "family": "spider",
+      "id": "golden-monster",
+      "level": 20,
+      "stats": {
+        "attackSpeed": 25,
+        "counter": 0,
+        "crit": 0,
+        "damageMax": 44,
+        "damageMin": 26.400000000000002,
+        "defense": 12,
+        "evasion": 0,
+        "maxHp": 400,
+        "regen": 0,
+        "vampirism": 0,
+      },
+    },
+    "rng": {
+      "a": 742572902,
+      "b": 3101030126,
+      "c": 944240956,
+      "d": 2927996893,
+    },
+  },
+}
+`;
