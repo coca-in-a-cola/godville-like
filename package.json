@@ -10,6 +10,7 @@
     "dev": "pnpm --filter @godville/web dev",
     "test": "vitest run",
     "test:watch": "vitest",
+    "balance": "node scripts/balance.ts",
     "typecheck": "pnpm -r --workspace-concurrency=1 typecheck && tsc -p tsconfig.tests.json",
     "validate:data": "node packages/data/scripts/validate-data.ts",
     "build": "pnpm validate:data && pnpm --filter @godville/web build"
