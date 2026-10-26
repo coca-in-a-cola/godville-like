@@ -1,5 +1,6 @@
 {
   "name": "godville-like",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.34.9",
@@ -12,12 +13,12 @@
     "format": "prettier --write",
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/release-tools.test.mjs",
     "test:watch": "vitest",
     "balance": "node scripts/balance.ts",
     "typecheck": "pnpm -r --workspace-concurrency=1 typecheck && tsc -p tsconfig.tests.json",
     "validate:data": "node packages/data/scripts/validate-data.ts",
-    "build": "pnpm validate:data && pnpm --filter @godville/web build"
+    "build": "pnpm validate:data && pnpm --filter @godville/web build && node scripts/build-metadata.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
@@ -25,6 +26,7 @@
     "eslint": "^10.0.0",
     "eslint-plugin-react-hooks": "^7.0.0",
     "fast-check": "^4.2.0",
+    "globals": "^17.13.0",
     "prettier": "^3.9.10",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.72.1",
