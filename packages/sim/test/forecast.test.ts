@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createGodState,
+  requestIntervention,
   FORECAST_TRIALS,
   HERO_BASE_STATS,
   advanceFight,
@@ -84,6 +86,25 @@ describe('Monte Carlo forecast', () => {
     const result = forecastFight(stalemate, { seed: 9, maxTicks: 300 });
     expect(result).toMatchObject({ unresolved: 200, heroWins: 0, monsterWins: 0, draws: 0, heroWinBp: 0, terminal: null });
     expect(runFight(stalemate, { maxTicks: 300 })).toMatchObject({ outcome: 'unresolved', ticks: 300 });
+  });
+
+  it.each([-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1])('rejects invalid budget %s even for terminal fights', (maxTicks) => {
+    const live = sandboxFight();
+    const done = { ...live, outcome: 'hero_won' as const };
+    for (const state of [live, done]) expect(() => forecastFight(state, { seed: 1, maxTicks })).toThrow(RangeError);
+  });
+
+  it('keeps paid queued Smite without consuming live GP, queue or RNG', () => {
+    const live = fightOf({}, { maxHp: 100, damageMin: 1000, damageMax: 1000 });
+    live.monster.hp = 200;
+    live.monster.bar = 149999;
+    const paid = requestIntervention(live, createGodState(), 'smite');
+    if (!paid.ok) throw new Error('Smite rejected');
+    const before = JSON.stringify(paid);
+    expect(forecastFight(paid.fight, { seed: 4, trials: 20, maxTicks: 1 }).heroWins).toBe(20);
+    expect(forecastFight({ ...paid.fight, queue: [] }, { seed: 4, trials: 20, maxTicks: 1 }).monsterWins).toBe(20);
+    expect(JSON.stringify(paid)).toBe(before);
+    expect(advanceFight(paid.fight, 100)).toEqual(advanceFight(JSON.parse(before).fight as FightState, 100));
   });
 
   it('counts draws', () => {

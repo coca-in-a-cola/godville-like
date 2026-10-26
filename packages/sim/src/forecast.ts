@@ -55,6 +55,9 @@ export function forecastFight(state: FightState, options: ForecastOptions): Fore
   if (!isUint32(options.seed)) throw new RangeError(`forecast seed must be a uint32`);
   if (!Number.isSafeInteger(trials) || trials < 1) throw new RangeError(`trials must be a positive integer`);
 
+  if (!Number.isSafeInteger(maxTicks) || maxTicks < 0) {
+    throw new RangeError(`maxTicks must be a non-negative safe integer, got ${String(maxTicks)}`);
+  }
   const counts = { hero_won: 0, monster_won: 0, draw: 0, unresolved: 0 };
   if (state.outcome !== null) {
     counts[state.outcome] = trials;
