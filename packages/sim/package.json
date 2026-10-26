@@ -1,0 +1,13 @@
+{
+  "name": "@godville/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure deterministic combat simulation: state in, state out. No DOM, clock, storage or UI.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

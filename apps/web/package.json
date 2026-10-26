@@ -1,0 +1,24 @@
+{
+  "name": "@godville/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@godville/data": "workspace:*",
+    "@godville/sim": "workspace:*",
+    "@preact/signals": "^2.3.0",
+    "comlink": "^4.4.2",
+    "intl-messageformat": "^10.7.16",
+    "preact": "^10.27.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.2",
+    "vite": "^7.1.0"
+  }
+}

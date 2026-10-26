@@ -1,0 +1,3 @@
+id,group,position,effect,value,min_zone,weight,name_en
+cursed,morality,prefix,mult_all_plus_curse,1.5,4,8,Cursed
+of_vampirism,stat,suffix,add_vampirism,1,1,10,of Vampirism

@@ -1,0 +1,324 @@
+:root {
+  --bg: #15161a;
+  --panel: #1d1f25;
+  --line: #30333c;
+  --text: #e6e6e6;
+  --muted: #8b8f99;
+  --dealt: #f2f2f2;
+  --taken: #ff6b6b;
+  --heal: #6bd68a;
+  --dodge: #8b8f99;
+  --crit: #ffd34d;
+  --god: #b98cff;
+  --hp: #c94a4a;
+  --hp-monster: #9a6a3a;
+  --attack: #d9d9d9;
+  --gp: #8a5cd6;
+  --invalid: #ff8a65;
+  color-scheme: dark;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  background: var(--bg);
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 1.3rem;
+}
+
+h2 {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+p {
+  margin: 0.25rem 0;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.notice.invalid,
+.invalid .stat-note {
+  color: var(--invalid);
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+  background: #262931;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.25rem 0.6rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.active {
+  border-color: var(--text);
+}
+
+.invalid input {
+  border-color: var(--invalid);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.speed {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.status {
+  color: var(--muted);
+}
+
+.combatants {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.combatant-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.bar {
+  position: relative;
+  background: #2a2d35;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar .fill {
+  height: 100%;
+}
+
+.bar.hp,
+.bar.gp {
+  height: 1.4rem;
+}
+
+.bar.hp .fill {
+  background: var(--hp);
+}
+
+.monster .bar.hp .fill {
+  background: var(--hp-monster);
+}
+
+.bar.attack {
+  height: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.bar.attack .fill {
+  background: var(--attack);
+}
+
+.bar.gp .fill {
+  background: var(--gp);
+}
+
+.bar-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.side {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.log-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  height: 22rem;
+  overflow-y: auto;
+}
+
+.log-lines li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(10rem, 16rem) 1fr;
+  gap: 0.5rem;
+  white-space: pre-wrap;
+}
+
+.log-time {
+  color: var(--muted);
+}
+
+.tone-dealt {
+  color: var(--dealt);
+}
+
+.tone-taken {
+  color: var(--taken);
+}
+
+.tone-heal {
+  color: var(--heal);
+}
+
+.tone-dodge {
+  color: var(--dodge);
+}
+
+.tone-crit {
+  color: var(--crit);
+}
+
+.tone-god,
+.god-text {
+  color: var(--god);
+}
+
+.tone-death {
+  font-weight: 600;
+}
+
+.outcome {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.outcome-hero_won strong {
+  color: var(--heal);
+}
+
+.outcome-monster_won strong {
+  color: var(--taken);
+}
+
+.forecast-win {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.intervention {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.5rem 0;
+}
+
+.god-action {
+  border-color: var(--god);
+  color: var(--god);
+}
+
+.setup-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.editors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.stats {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.stats legend {
+  font-weight: 600;
+  padding: 0 0.3rem;
+}
+
+.stat {
+  display: grid;
+  grid-template-columns: 11rem 7rem 1fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.stat input {
+  width: 100%;
+}
+
+.stat-note {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 800px) {
+  .columns,
+  .editors,
+  .combatants {
+    grid-template-columns: 1fr;
+  }
+}

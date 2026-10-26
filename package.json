@@ -1,0 +1,23 @@
+{
+  "name": "godville-like",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @godville/web dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r --workspace-concurrency=1 typecheck && tsc -p tsconfig.tests.json",
+    "validate:data": "node packages/data/scripts/validate-data.ts",
+    "build": "pnpm validate:data && pnpm --filter @godville/web build"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "fast-check": "^4.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

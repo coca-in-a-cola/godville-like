@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# caches
+.vite/
+.cache/
+coverage/
+.vitest/
+.eslintcache
+
+# logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# credentials and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.npmrc.local
+credentials*.json
+*token*.json
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,20 @@
+{
+  "name": "@godville/data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CSV loaders and Zod schemas for game data under the root data/ directory.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "papaparse": "^5.5.3",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.16"
+  }
+}
