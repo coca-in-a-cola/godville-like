@@ -1,3 +1,4 @@
+export * from './world.ts';
 export * from './loot.ts';
 export * from './inventory.ts';
 export * from './monsters.ts';
