@@ -50,6 +50,8 @@ export interface QueuedIntervention {
   kind: InterventionKind;
   /** GP already paid when the intervention was queued. */
   cost: number;
+  /** Strength snapshotted at payment, basis points; omitted means 10000. */
+  strengthBp?: number;
 }
 
 export interface FightState {
@@ -192,12 +194,12 @@ function applyRegen(c: CombatantState): void {
 function applyIntervention(s: FightState, q: QueuedIntervention, out: FightEvent[] | null): void {
   if (q.kind === 'blessing') {
     const hero = s.hero;
-    const amount = hero.hp > 0 ? Math.min(blessingHeal(hero.stats.maxHp), hero.stats.maxHp - hero.hp) : 0;
+    const amount = hero.hp > 0 ? Math.min(Math.floor(blessingHeal(hero.stats.maxHp) * (q.strengthBp ?? 10000) / 10000), hero.stats.maxHp - hero.hp) : 0;
     hero.hp += amount;
     out?.push({ type: 'god', tick: s.tick, action: 'blessing', target: 'hero', cost: q.cost, amount, hp: hero.hp });
   } else {
     const monster = s.monster;
-    const amount = Math.min(smiteDamage(monster.stats.maxHp), monster.hp);
+    const amount = Math.min(Math.floor(smiteDamage(monster.stats.maxHp) * (q.strengthBp ?? 10000) / 10000), monster.hp);
     monster.hp -= amount;
     out?.push({ type: 'god', tick: s.tick, action: 'smite', target: 'monster', cost: q.cost, amount, hp: monster.hp });
   }

@@ -64,16 +64,17 @@ export type InterventionResult =
  * Nothing happens between ticks, so queued smites hit the monster at its
  * current HP; a smite that could only hit a corpse is refused up front.
  */
-export function requestIntervention(fight: FightState, god: GodState, kind: InterventionKind): InterventionResult {
+export function requestIntervention(fight: FightState, god: GodState, kind: InterventionKind, strengthBp?: number): InterventionResult {
+  if (strengthBp !== undefined && (!Number.isSafeInteger(strengthBp) || strengthBp < 1 || strengthBp > 1000000)) throw new RangeError('invalid miracle strength');
   if (fight.outcome !== null) return { ok: false, reason: 'fight_over' };
   const cost = INTERVENTION_COST[kind];
   if (god.gp < cost) return { ok: false, reason: 'insufficient_gp' };
   if (kind === 'smite') {
-    const queuedDamage = fight.queue.filter((q) => q.kind === 'smite').length * smiteDamage(fight.monster.stats.maxHp);
+    const queuedDamage = fight.queue.filter((q) => q.kind === 'smite').reduce((sum, q) => sum + Math.floor(smiteDamage(fight.monster.stats.maxHp) * (q.strengthBp ?? 10000) / 10000), 0);
     if (queuedDamage >= fight.monster.hp) return { ok: false, reason: 'target_doomed' };
   }
   const next = cloneFight(fight);
-  const queued: QueuedIntervention = { seq: next.nextSeq, kind, cost };
+  const queued: QueuedIntervention = { seq: next.nextSeq, kind, cost, ...(strengthBp !== undefined ? { strengthBp } : {}) };
   next.queue.push(queued);
   next.nextSeq += 1;
   return { ok: true, fight: next, god: { ...god, gp: god.gp - cost }, queued: { ...queued } };
