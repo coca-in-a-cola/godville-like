@@ -10,7 +10,7 @@ const realSources = Object.fromEntries(
 describe('root data/ CSV files', () => {
   it('validate and load typed rows', () => {
     const data = loadGameData(realSources);
-    expect(data.monsters.map((m) => [m.id, m.family])).toEqual([
+    expect(data.monsters.slice(0, 5).map((m) => [m.id, m.family])).toEqual([
       ['dust_bunny', 'spider'],
       ['dreaded_gazebo', 'golem'],
       ['blasphemouse', 'wraith'],

@@ -51,8 +51,8 @@ export const modifierRow = z.strictObject({
   id,
   group: z.enum(MODIFIER_GROUPS),
   position: z.enum(MODIFIER_POSITIONS),
-  /** Effect token; its vocabulary is defined with the loot generator. */
-  effect: id,
+  /** Closed vocabulary shared structurally with the pure loot domain. */
+  effect: z.enum(['mult_all', 'mult_all_plus_curse', 'mult_all_plus_regen', 'blessing_heal', 'mult_all_weaken_miracles', 'mult_all_rusty', 'mult_all_polished', 'mult_all_attic', 'mult_price', 'counterfeit', 'add_damage', 'add_max_hp', 'add_attack_speed', 'add_defense', 'add_crit', 'add_evasion', 'add_regen', 'add_vampirism', 'add_counter', 'add_justice', 'add_everything', 'random_standard', 'add_beerburgh']),
   value: decimal,
   min_zone: positiveInt,
   weight: positiveInt,

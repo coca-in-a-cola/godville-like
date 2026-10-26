@@ -1,3 +1,36 @@
 id,group,position,effect,value,min_zone,weight,name_en
+shoddy,quality,prefix,mult_all,0.7,1,10,Shoddy
+fine,quality,prefix,mult_all,1.1,1,10,Fine
+epic,quality,prefix,mult_all,1.2,3,10,Epic
+legendary,quality,prefix,mult_all,1.5,8,10,Legendary
+divine,quality,prefix,mult_all,2,16,10,Divine
+bad,morality,prefix,mult_all,0.75,1,10,Bad
 cursed,morality,prefix,mult_all_plus_curse,1.5,4,8,Cursed
-of_vampirism,stat,suffix,add_vampirism,1,1,10,of Vampirism
+blessed,morality,prefix,mult_all_plus_regen,1.1,2,10,Blessed
+holy,morality,prefix,blessing_heal,1.1,5,10,Holy
+heretical,morality,prefix,mult_all_weaken_miracles,1.4,6,10,Heretical
+torn,condition,prefix,mult_all,0.8,1,10,Torn
+worn,condition,prefix,mult_all,0.9,1,10,Worn
+rusty,condition,prefix,mult_all_rusty,0.85,1,10,Rusty
+polished,condition,prefix,mult_all_polished,1.05,2,10,Polished
+squeaky,condition,prefix,add_evasion,-2,1,10,Squeaky
+cheap,economy,prefix,mult_price,0.5,1,10,Cheap
+expensive,economy,prefix,mult_price,2,1,10,Expensive
+golden,economy,prefix,mult_price,3,4,10,Golden
+counterfeit,economy,prefix,counterfeit,0.1,4,10,Counterfeit
+of_sharpness,stat,suffix,add_damage,2,1,10,of Sharpness
+of_the_bull,stat,suffix,add_max_hp,10,1,10,of the Bull
+of_haste,stat,suffix,add_attack_speed,4,1,10,of Haste
+of_the_turtle,stat,suffix,add_defense,2,1,10,of the Turtle
+of_precision,stat,suffix,add_crit,2,1,10,of Precision
+of_the_hare,stat,suffix,add_evasion,2,1,10,of the Hare
+of_the_troll,stat,suffix,add_regen,0.3,1,10,of the Troll
+of_vampirism,stat,suffix,add_vampirism,1.5,1,10,of Vampirism
+of_spite,stat,suffix,add_counter,2,1,10,of Spite
+of_justice,stat,suffix,add_justice,1,3,10,of Justice
+of_everything,stat,suffix,add_everything,0.25,12,10,of Everything
+from_far_lands,origin,suffix,random_standard,1,2,10,from Far Lands
+from_grandmas_attic,origin,suffix,mult_all_attic,1.1,1,10,from Grandma's Attic
+from_beerburgh,origin,suffix,add_beerburgh,1,3,10,from Beerburgh
+from_tradeburg,origin,suffix,mult_price,1.3,1,10,from Tradeburg
+from_lost_and_found,origin,suffix,mult_price,0.5,1,10,from the Lost and Found
