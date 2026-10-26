@@ -38,6 +38,8 @@ export const DEFAULT_WORLD_TUNING: Readonly<WorldTuning> = Object.freeze({
 export const WORLD_RESOURCE_CAP = 1_000_000_000_000;
 
 export type WorldPhase = 'town' | 'travel' | 'combat' | 'return' | 'dead';
+export type VoiceIntent = 'fight' | 'flee' | 'rest' | 'town' | 'dig';
+export const VOICE_WORLD_POLICY = Object.freeze({ restHealPercent: 5, digBrickBp: 50 });
 export type ReturnReason = 'hp' | 'pouch' | 'quest';
 export interface WorldQuest { id: string; level: number; progress: number }
 export interface WorldHero extends HeroQuirks {
@@ -60,6 +62,7 @@ export type WorldEvent = { seq: number; atMs: number } & (
   | { type: 'diary'; variant: number }
   | { type: 'town_service'; sold: number; gold: number; boughtId: string | null }
   | { type: 'resurrect'; goldLost: number; itemId: string | null }
+  | { type: 'voice_effect'; intent: VoiceIntent; amount: number }
 );
 type EventPayload = WorldEvent extends infer E ? E extends WorldEvent ? Omit<E, 'seq' | 'atMs'> : never : never;
 export interface WorldState {
@@ -67,6 +70,8 @@ export interface WorldState {
   nextId: number; nextEventSeq: number; phase: WorldPhase; phaseMs: number;
   travelCarryMs: number; deathRemainingMs: number; hero: WorldHero;
   combat: { fight: FightState; monster: GeneratedMonster } | null;
+  /** Internal decision hint from paid, obeyed Voice; never direct movement. */
+  voiceIntent?: VoiceIntent;
   faith: number; bricks: number; god: GodState;
   shop: { townId: string; day: number; bought: string[] } | null;
   diary: WorldEvent[]; tuning: WorldTuning;
@@ -221,7 +226,11 @@ function encounter(s: WorldState, c: GameData, events: WorldEvent[]): void {
   // Cheap TTK ratio is a heuristic score, NOT a calibrated probability.
   const score = !Number.isFinite(estimate.heroTtk) ? 0 : !Number.isFinite(estimate.monsterTtk) ? 1 : estimate.monsterTtk / (estimate.heroTtk + estimate.monsterTtk);
   const threshold = Math.max(0, Math.min(1, s.hero.courage + s.hero.alignment * 0.01));
-  if (score < threshold) {
+  const intent = s.voiceIntent;
+  if (intent === 'fight' || intent === 'flee') {
+    delete s.voiceIntent; emit(s, events, { type: 'voice_effect', intent, amount: 0 });
+  }
+  if (intent === 'flee' || (intent !== 'fight' && score < threshold)) {
     const success = rollBp(s.rng, Math.min(10000, 5000 + s.hero.stats.evasionBp));
     emit(s, events, { type: 'flee', success });
     if (success) { s.totals.fled++; return; }
@@ -229,10 +238,27 @@ function encounter(s: WorldState, c: GameData, events: WorldEvent[]): void {
   s.combat = { fight, monster }; phase(s, events, 'combat');
 }
 function travel(s: WorldState, c: GameData, events: WorldEvent[]): void {
+  if (s.voiceIntent === 'town') {
+    delete s.voiceIntent; emit(s, events, { type: 'voice_effect', intent: 'town', amount: 0 });
+    phase(s, events, 'return'); return;
+  }
   if (decideReturn(s, events)) return;
   s.travelCarryMs += TICK_MS;
   if (s.travelCarryMs < s.tuning.stepMs) return;
   s.travelCarryMs -= s.tuning.stepMs;
+  if (s.voiceIntent === 'rest' || s.voiceIntent === 'dig') {
+    const intent = s.voiceIntent; delete s.voiceIntent;
+    let amount = 0;
+    if (intent === 'rest') {
+      amount = Math.min(s.hero.stats.maxHp - s.hero.hp, Math.floor(s.hero.stats.maxHp * VOICE_WORLD_POLICY.restHealPercent / 100));
+      s.hero.hp += amount;
+    } else if (rollBp(s.rng, VOICE_WORLD_POLICY.digBrickBp)) {
+      amount = 1; s.bricks = bounded(s.bricks + amount); emit(s, events, { type: 'find', kind: 'brick', amount });
+    } else {
+      amount = s.tuning.findGold; s.hero.gold = bounded(s.hero.gold + amount); emit(s, events, { type: 'find', kind: 'gold', amount });
+    }
+    emit(s, events, { type: 'voice_effect', intent, amount }); return;
+  }
   s.hero.distance += s.tuning.milesPerStep; s.totals.miles = bounded(s.totals.miles + s.tuning.milesPerStep);
   progress(s, s.tuning.questMileProgress * s.tuning.milesPerStep);
   if (decideReturn(s, events)) return;
@@ -247,13 +273,28 @@ function travel(s: WorldState, c: GameData, events: WorldEvent[]): void {
   } else emit(s, events, { type: 'diary', variant: randomBelow(s.rng, 16) });
   if (s.phase === 'travel') decideReturn(s, events);
 }
+/** @internal Shared lethal transition for combat and session punishment; mutates owned clones only. */
+export function enterWorldDeathInPlace(s: WorldState, events: WorldEvent[]): void {
+  if (s.phase === 'dead') return;
+  delete s.voiceIntent; s.combat = null; s.hero.hp = 0;
+  s.totals.deaths++; s.deathRemainingMs = s.tuning.deathMs; phase(s, events, 'dead');
+}
 function combat(s: WorldState, c: GameData, events: WorldEvent[]): void {
   const active = s.combat!; const fight = active.fight; stepInPlace(fight, null); s.hero.hp = fight.hero.hp;
+  if (!fight.outcome && (s.voiceIntent === 'fight' || s.voiceIntent === 'flee')) {
+    const intent = s.voiceIntent; delete s.voiceIntent;
+    emit(s, events, { type: 'voice_effect', intent, amount: 0 });
+    if (intent === 'flee') {
+      const success = rollBp(s.rng, Math.min(10000, 5000 + s.hero.stats.evasionBp));
+      emit(s, events, { type: 'flee', success });
+      if (success) { s.totals.fled++; s.combat = null; phase(s, events, 'travel'); return; }
+    }
+  }
   if (!fight.outcome) return;
   emit(s, events, { type: 'combat_end', outcome: fight.outcome, monsterId: active.monster.id, ticks: fight.tick, hp: s.hero.hp });
   s.combat = null;
   if (fight.outcome !== 'hero_won') {
-    s.hero.hp = 0; s.totals.deaths++; s.deathRemainingMs = s.tuning.deathMs; phase(s, events, 'dead'); return;
+    enterWorldDeathInPlace(s, events); return;
   }
   s.totals.kills++; const rewardLevel = Math.max(1, active.monster.level);
   s.hero.gold = bounded(s.hero.gold + s.tuning.killGold * rewardLevel); xp(s, events, s.tuning.killXp * rewardLevel);
