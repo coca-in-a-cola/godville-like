@@ -1,4 +1,5 @@
 export * from './loot.ts';
+export * from './inventory.ts';
 export {
   cloneRng,
   isUint32,
