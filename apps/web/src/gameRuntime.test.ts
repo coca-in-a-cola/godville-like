@@ -62,6 +62,17 @@ describe('headless runtime acceptance', () => {
     expect(h.yields).toBeGreaterThan(35000);
     expect(h.runtime.canonicalSession.value).toEqual(advanceSession(createSession(gameData, 42), gameData, 36000000, 'unwatched').state);
   }, 30000);
+  it('batches a real ten-hour browser replay exactly with fewer yielding tasks', async () => {
+    const storage = memoryStorage(); store(storage);
+    let seedCalls = 0;
+    const h = harness(storage, { catchupChunkMs: 10000, seed: () => { seedCalls++; return 99; } });
+    h.setTime(36100000); await h.runtime.start();
+    expect(seedCalls).toBe(0);
+    expect(h.yields).toBeLessThan(4000);
+    expect(h.yields).toBeGreaterThan(3000);
+    expect(h.runtime.progress.value).toEqual({ completedMs: 36000000, totalMs: 36000000 });
+    expect(h.runtime.canonicalSession.value).toEqual(advanceSession(createSession(gameData,42),gameData,36000000,'unwatched').state);
+  });
   it('keeps a secondary runtime read-only with no actions, simulation, or saves', async () => {
     const storage = memoryStorage(); store(storage); const before = storage.writes;
     const h = harness(storage, { ownership: { acquire: async () => false, owns: () => false, release() {} } });

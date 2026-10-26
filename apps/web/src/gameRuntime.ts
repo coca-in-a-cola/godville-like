@@ -5,9 +5,11 @@ import { createPersistence, type StoragePort } from './persistence.ts';
 import type { OwnershipPort } from './ownership.ts';
 export interface ForecastPort { forecast(state: FightState, seed: number): Promise<ForecastResult>; dispose(): void }
 export interface RuntimeOptions {
-  content: GameData; seed: number; storage: StoragePort; ownership: OwnershipPort;
+  content: GameData; seed: number | (() => number); storage: StoragePort; ownership: OwnershipPort;
   now: () => number; monotonicNow: () => number; yieldTask: () => Promise<void>;
   forecast?: ForecastPort; visible?: boolean;
+  /** Browser replay batching only; default preserves the narrow headless contract. */
+  catchupChunkMs?: number;
 }
 export function createGameRuntime(options: RuntimeOptions) {
   const canonicalSession = signal<SessionState | null>(null);
@@ -31,7 +33,8 @@ export function createGameRuntime(options: RuntimeOptions) {
   let lastForecastInput: FightState | null = null;
   let pumping: Promise<void> | null = null;
   const segments: { end: number; speed: GameSpeed; collect: boolean }[] = [];
-  const chunkMs = 1000; // <=10 world ticks per yielding slice, even in watched backlog.
+  const maxChunkMs = Math.max(1000, Math.min(10000, Math.floor(options.catchupChunkMs ?? 1000)));
+  let chunkMs = Math.min(5000, maxChunkMs);
   function report(error: unknown) { errors.value = [...errors.value, String(error)].slice(-10); }
   function fail(error: unknown) { report(error); status.value = 'error'; generation++; forecast.value = null; }
   function owned(): boolean {
@@ -57,12 +60,15 @@ export function createGameRuntime(options: RuntimeOptions) {
     progress.value = { completedMs: progress.value.completedMs, totalMs: progress.value.totalMs + time - observedAt };
     observedAt = time;
   }
-  function advanceOne(): boolean {
+  function advanceOne(limit = chunkMs): boolean {
     if (!segments.length || !canonicalSession.value || !owned()) return false;
     const segment = segments[0]!;
-    const amount = Math.min(chunkMs, segment.end - accountedAt);
+    const amount = Math.min(limit, segment.end - accountedAt);
     const previousId = canonicalSession.value.world.combat?.monster.id;
+    const began = options.monotonicNow();
     const advanced = advanceSession(canonicalSession.value, options.content, amount, segment.speed, { collectCombatEvents: segment.collect });
+    const duration = options.monotonicNow() - began;
+    if (maxChunkMs > 1000) chunkMs = Math.max(1000, Math.min(maxChunkMs, duration > 8 ? Math.floor(chunkMs / 2) : chunkMs + 1000));
     canonicalSession.value = advanced.state; accountedAt += amount;
     const nextId = advanced.state.world.combat?.monster.id;
     if (previousId !== nextId) { generation++; forecast.value = null; combatLog.value = []; }
@@ -107,7 +113,7 @@ export function createGameRuntime(options: RuntimeOptions) {
       const loaded = persistence.load();
       if (loaded.kind === 'error') { fail(loaded.error); return; }
       observedAt = accountedAt = loaded.kind === 'saved' ? loaded.envelope.savedAtMs : clock();
-      canonicalSession.value = loaded.kind === 'saved' ? loaded.envelope.session : createSession(options.content, options.seed);
+      canonicalSession.value = loaded.kind === 'saved' ? loaded.envelope.session : createSession(options.content, typeof options.seed === 'function' ? options.seed() : options.seed);
       if (loaded.kind === 'saved' && loaded.envelope.pending?.length) {
         segments.push(...loaded.envelope.pending.map(segment => ({ ...segment, collect: false })));
         observedAt = segments.at(-1)!.end;
@@ -157,7 +163,7 @@ export function createGameRuntime(options: RuntimeOptions) {
     if (loading.value || !owned()) return;
     try {
       capture(visible ? 'watched' : 'unwatched', visible); visible = false; generation++; forecast.value = null;
-      advanceOne(); flush();
+      advanceOne(1000); flush();
     } catch (error) { fail(error); }
   }
   function stop() {

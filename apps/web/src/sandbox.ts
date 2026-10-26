@@ -126,6 +126,8 @@ export function intervene(kind: InterventionKind): void {
   const result = requestIntervention(fight.value, god.value, kind);
   batch(() => {
     if (result.ok) {
+      fightGeneration++;
+      forecast.value = null;
       fight.value = result.fight;
       god.value = result.god;
       rejection.value = null;
@@ -170,7 +172,7 @@ export function startLoop(): () => void {
       if (nextGod.gp !== god.value.gp || nextGod.regenCarryMs !== god.value.regenCarryMs) god.value = nextGod;
       if (nextFight !== null) {
         fight.value = nextFight;
-        if (newEvents.length > 0) events.value = [...events.value, ...newEvents];
+        if (newEvents.length > 0) events.value = [...events.value, ...newEvents].slice(-400);
         if (nextFight.outcome !== null) running.value = false;
       }
     });
