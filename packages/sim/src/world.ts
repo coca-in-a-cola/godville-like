@@ -250,7 +250,7 @@ function travel(s: WorldState, c: GameData, events: WorldEvent[]): void {
   s.travelCarryMs -= s.tuning.stepMs;
   if (s.voiceIntent === 'rest' || s.voiceIntent === 'dig') {
     const intent = s.voiceIntent; delete s.voiceIntent;
-    let amount = 0;
+    let amount: number;
     if (intent === 'rest') {
       amount = Math.min(s.hero.stats.maxHp - s.hero.hp, Math.floor(s.hero.stats.maxHp * VOICE_WORLD_POLICY.restHealPercent / 100));
       s.hero.hp += amount;

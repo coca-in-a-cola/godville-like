@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 import { afterEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => {
-  const runtime = { tick: vi.fn(async () => {}), requestForecast: vi.fn(async () => {}), setVisible: vi.fn(async (_visible: boolean) => {}), pageHide: vi.fn(), stop: vi.fn(), start: vi.fn(async () => {}) };
+  const runtime = { tick: vi.fn(async () => {}), requestForecast: vi.fn(async () => {}), setVisible: vi.fn<(visible: boolean) => Promise<void>>(async () => {}), pageHide: vi.fn(), stop: vi.fn(), start: vi.fn(async () => {}) };
   return { runtime, create: vi.fn(() => runtime), release: vi.fn(), terminate: vi.fn(), forecast: vi.fn() };
 });
 vi.mock('./gameRuntime.ts', () => ({ createGameRuntime: mocks.create }));

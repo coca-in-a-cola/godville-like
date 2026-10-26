@@ -84,7 +84,8 @@ describe('stat normalization', () => {
       ]),
     );
     expect(validateStatBlock(null).ok).toBe(false);
-    const { vampirism: _omitted, ...missing } = DUMMY;
+    const missing: Partial<StatBlock> = { ...DUMMY };
+    delete missing.vampirism;
     expect(validateStatBlock(missing)).toEqual({ ok: false, errors: [{ field: 'vampirism', code: 'not_a_number' }] });
   });
 

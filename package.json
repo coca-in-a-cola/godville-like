@@ -8,6 +8,10 @@
   },
   "scripts": {
     "dev": "pnpm --filter @godville/web dev",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write",
+    "format:check": "prettier --check .",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "test": "vitest run",
     "test:watch": "vitest",
     "balance": "node scripts/balance.ts",
@@ -16,9 +20,14 @@
     "build": "pnpm validate:data && pnpm --filter @godville/web build"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.0",
     "@types/node": "^24.3.0",
+    "eslint": "^10.0.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "fast-check": "^4.2.0",
+    "prettier": "^3.9.10",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.72.1",
     "vitest": "^3.2.4"
   }
 }
