@@ -97,7 +97,7 @@ export function GameView({ runtime: r }: { runtime: GameRuntime }) {
     {(r.loading.value || r.catchingUp.value) && <aside class="notice" role="status" aria-live="polite"><strong>{t.t(r.catchingUp.value ? 'ui.catchingUp' : 'ui.loading')}</strong><progress max={Math.max(1, r.progress.value.totalMs)} value={r.progress.value.completedMs} /><p>{t.t('ui.progress', { done: t.number(r.progress.value.completedMs / 1000, { maximumFractionDigits: 0 }), total: t.number(r.progress.value.totalMs / 1000, { maximumFractionDigits: 0 }) })}</p></aside>}
     {s && <div class="game-columns" aria-busy={r.catchingUp.value}>
       <div class="column" id="hero"><HeroCard session={s} profile={profile} /><StatusCard session={s} /><StatsCard session={s} /></div>
-      <div class="column" id="live"><SceneCard session={s} /><FocusCard session={s} runtime={r} /><DiaryCard session={s} runtime={r} /></div>
+      <div class="column" id="live"><SceneCard session={s} runtime={r} /><FocusCard session={s} runtime={r} /><DiaryCard session={s} runtime={r} /></div>
       <div class="column" id="god"><GodPanel session={s} godName={profile.godName} act={act} disabled={disabled} /><p class="action-result" role="status" aria-live="polite">{message}</p><EquipmentCard session={s} {...items} /><BagCard session={s} {...items} onCompact={setCompact} /><RoadMapCard session={s} /></div>
     </div>}
     <footer>{t.t('ui.footer')}</footer>
