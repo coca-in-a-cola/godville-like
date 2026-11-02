@@ -57,7 +57,20 @@ html[data-theme] body{margin:0;background:var(--paper);color:var(--ink);font:14p
 .ledger-log{overflow:auto;overscroll-behavior:contain;list-style:none;padding:0;margin:0;font-size:13px;scrollbar-color:var(--rule) var(--sheet)}
 .ledger-log li{padding:6px 0;border-bottom:1px solid var(--rule);overflow-wrap:anywhere}.ledger-log time{display:block;font-size:10px;color:var(--muted)}
 .ledger-log .log-actor{font:11px var(--mono)}
-.combat-log{max-height:180px;margin-top:8px;border-top:1px solid var(--rule)}.diary{max-height:440px}.diary li{font-family:var(--serif)}
+.combat-log{max-height:180px;margin-top:8px;border-top:1px solid var(--rule)}
+.diary{height:380px;max-height:380px;overflow-y:auto;position:relative}
+.diary-new-badge{position:sticky;top:0;z-index:10;width:100%;background:var(--accent);color:var(--sheet);font-family:var(--mono);text-align:center;padding:6px;cursor:pointer;border:none;font-size:11px;font-weight:bold;border-radius:2px;margin-bottom:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2)}
+.diary-combat-pinned{border:1px solid var(--accent);background:var(--sheet);margin-bottom:12px;padding:8px;border-radius:2px}
+.combat-pinned-summary{cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:500}
+.combat-tag{font-family:var(--mono);font-size:9px;text-transform:uppercase;background:var(--accent);color:var(--sheet);padding:2px 6px;border-radius:2px;letter-spacing:0.05em}
+.combat-pinned-body{margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)}
+.duel-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.combat-mini-log{list-style:none;padding:0;margin:0;font-size:11px;max-height:100px;overflow-y:auto}
+.combat-mini-log li{padding:3px 0;border-bottom:1px solid var(--rule)}
+.diary-item{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--rule)}
+.diary-meta{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:var(--muted)}
+.diary-text{font-family:var(--serif);font-size:13px;line-height:1.5;color:var(--ink)}
+.diary-data{font-family:var(--mono);font-size:11px;color:var(--accent)}
 .tone-taken,.tone-death{color:var(--hp)}.tone-heal{color:var(--xp)}.tone-dodge{color:var(--muted)}.tone-crit{color:var(--accent);font-weight:600}.tone-god{color:var(--gp)}.tone-outcome{color:var(--accent)}
 .miracles{display:grid;grid-template-columns:1fr 1fr;gap:6px}.miracle{width:100%}
 .hint-drawer summary{cursor:pointer;margin-top:4px}
