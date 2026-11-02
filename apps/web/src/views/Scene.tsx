@@ -263,7 +263,7 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       ctx.textAlign = 'left';
     }
 
-  }, [s, currentTheme, timeScale, isCatchingUp, prefersReducedMotion]);
+  }, [s, currentTheme, timeScale, isCatchingUp, prefersReducedMotion, isPaused, isStaticFrame, r]);
 
   return (
     <section class="card scene-card">

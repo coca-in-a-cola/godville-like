@@ -44,22 +44,23 @@ export function FocusCard({ session: s, runtime: r }: { session: SessionState; r
 export function DiaryCard({ session: s, runtime: r }: { session: SessionState; runtime?: GameRuntime }) {
   const history = diaryLines(s);
   const entries = [...history].reverse();
+  const topId = entries[0]?.id ?? null;
+  const entriesLength = entries.length;
   const scrollRef = useRef<HTMLOListElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isScrolledDown, setIsScrolledDown] = useState(false);
   const lastTopId = useRef<string | null>(null);
 
   useEffect(() => {
-    const currentTopId = entries[0]?.id ?? null;
-    if (lastTopId.current !== null && currentTopId !== lastTopId.current) {
+    if (lastTopId.current !== null && topId !== lastTopId.current) {
       if (isScrolledDown) {
         setUnreadCount((prev: number) => prev + 1);
       } else {
         setUnreadCount(0);
       }
     }
-    lastTopId.current = currentTopId;
-  }, [entries.length, entries[0]?.id, isScrolledDown]);
+    lastTopId.current = topId;
+  }, [entriesLength, topId, isScrolledDown]);
 
   const handleScroll = (event: Event) => {
     const el = event.currentTarget as HTMLElement;

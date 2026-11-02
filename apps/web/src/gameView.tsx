@@ -81,15 +81,18 @@ function useMusic(profileMusic: boolean, r: GameRuntime, s: SessionState | null)
     engineRef.current?.setFastForward(isFast);
   }, [isFast]);
 
+  const combatLog = r.combatLog.value;
+  const worldNextSeq = s?.world.nextEventSeq;
+  const lastWorldEvent = s?.world.diary.at(-1);
+
   // Event-driven SFX
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine || isFast) return;
 
     // 1. Combat Log events
-    const log = r.combatLog.value;
-    if (log.length > lastCombatEventCount.current) {
-      const newEntries = log.slice(lastCombatEventCount.current);
+    if (combatLog.length > lastCombatEventCount.current) {
+      const newEntries = combatLog.slice(lastCombatEventCount.current);
       for (const entry of newEntries) {
         const ev = entry.event;
         if (ev.type === 'hit') {
@@ -103,17 +106,16 @@ function useMusic(profileMusic: boolean, r: GameRuntime, s: SessionState | null)
         }
       }
     }
-    lastCombatEventCount.current = log.length;
+    lastCombatEventCount.current = combatLog.length;
 
     // 2. World / Level events
-    if (s && s.world.nextEventSeq > lastWorldSeq.current) {
-      const latest = s.world.diary.at(-1);
-      if (latest && latest.seq >= lastWorldSeq.current) {
-        if (latest.type === 'level') engine.playLevelUp();
+    if (worldNextSeq !== undefined && worldNextSeq > lastWorldSeq.current) {
+      if (lastWorldEvent && lastWorldEvent.seq >= lastWorldSeq.current) {
+        if (lastWorldEvent.type === 'level') engine.playLevelUp();
       }
-      lastWorldSeq.current = s.world.nextEventSeq;
+      lastWorldSeq.current = worldNextSeq;
     }
-  }, [r.combatLog.value.length, s?.world.nextEventSeq, isFast]);
+  }, [combatLog, worldNextSeq, lastWorldEvent, isFast]);
 }
 
 export function GameView({ runtime: r }: { runtime: GameRuntime }) {
