@@ -53,17 +53,67 @@ function ControlRow({ runtime: r, compact, onCompact }: { runtime: GameRuntime; 
   </nav>;
 }
 
-/** Calm music follows stored preferences (or the start-screen choice) and starts on the first user gesture. */
-function useMusic(profileMusic: boolean) {
+/** Calm music and procedural SFX follow stored preferences and start on the first user gesture. */
+function useMusic(profileMusic: boolean, r: GameRuntime, s: SessionState | null) {
+  const engineRef = useRef<ReturnType<typeof createCalmMusic> | null>(null);
+  const lastCombatEventCount = useRef(0);
+  const lastWorldSeq = useRef(0);
+
   useEffect(() => {
     if (!musicStored) music.value = { ...music.value, on: profileMusic };
     const engine = createCalmMusic();
+    engineRef.current = engine;
     let unlocked = false;
     const unlock = () => { unlocked = true; engine.set(music.value); };
     const off = music.subscribe(value => { if (unlocked) engine.set(value); });
     window.addEventListener('pointerdown', unlock, { once: true });
-    return () => { off(); window.removeEventListener('pointerdown', unlock); engine.dispose(); };
+    return () => {
+      off();
+      window.removeEventListener('pointerdown', unlock);
+      engine.dispose();
+      engineRef.current = null;
+    };
   }, [profileMusic]);
+
+  // Fast-forward gating: silence SFX during acceleration or catch-up
+  const isFast = r.timeScale.value > 1 || r.catchingUp.value;
+  useEffect(() => {
+    engineRef.current?.setFastForward(isFast);
+  }, [isFast]);
+
+  // Event-driven SFX
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || isFast) return;
+
+    // 1. Combat Log events
+    const log = r.combatLog.value;
+    if (log.length > lastCombatEventCount.current) {
+      const newEntries = log.slice(lastCombatEventCount.current);
+      for (const entry of newEntries) {
+        const ev = entry.event;
+        if (ev.type === 'hit') {
+          if (ev.crit) engine.playCrit();
+          else engine.playHit();
+        } else if (ev.type === 'dodge') {
+          engine.playDodge();
+        } else if (ev.type === 'god') {
+          if (ev.action === 'smite') engine.playSmite();
+          else if (ev.action === 'blessing') engine.playBlessing();
+        }
+      }
+    }
+    lastCombatEventCount.current = log.length;
+
+    // 2. World / Level events
+    if (s && s.world.nextEventSeq > lastWorldSeq.current) {
+      const latest = s.world.diary.at(-1);
+      if (latest && latest.seq >= lastWorldSeq.current) {
+        if (latest.type === 'level') engine.playLevelUp();
+      }
+      lastWorldSeq.current = s.world.nextEventSeq;
+    }
+  }, [r.combatLog.value.length, s?.world.nextEventSeq, isFast]);
 }
 
 export function GameView({ runtime: r }: { runtime: GameRuntime }) {
@@ -72,7 +122,7 @@ export function GameView({ runtime: r }: { runtime: GameRuntime }) {
   const [compact, setCompact] = useState(false);
   const s = r.canonicalSession.value;
   const profile = r.profile.value;
-  useMusic(profile.calmMusic);
+  useMusic(profile.calmMusic, r, s);
   const disabled = pending || r.loading.value || r.catchingUp.value || r.status.value !== 'ready';
   const act: Act = async action => {
     if (disabled) return;
