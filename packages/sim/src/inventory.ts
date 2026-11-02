@@ -10,7 +10,7 @@ export interface Trophy { id: string; contentId: string; price: number }
 export interface Inventory { equipped: Partial<Record<GearSlot, GearItem>>; bag: readonly GearItem[]; trophies: readonly Trophy[] }
 export interface HeroQuirks { alignment: number; favoriteModifierId: string | null }
 export const NEUTRAL_QUIRKS: Readonly<HeroQuirks> = { alignment: 0, favoriteModifierId: null };
-export type InventoryEvent = { type: 'pickup' | 'drop' | 'equip' | 'sell' | 'bless' | 'death_loss'; itemId: string };
+export type InventoryEvent = { type: 'pickup' | 'drop' | 'equip' | 'sell' | 'bless' | 'unbless' | 'death_loss'; itemId: string };
 export function emptyInventory(): Inventory { return { equipped: {}, bag: [], trophies: [] }; }
 export function perceivedPower(item: GearItem, quirks: HeroQuirks): number {
   let multiplier = item.godBlessed ? 1.5 : 1;
@@ -95,18 +95,37 @@ export function sellInTown(inventory: Inventory, quirks: HeroQuirks = NEUTRAL_QU
   for (const trophy of inventory.trophies) { sold.push(trophy.id); gold += trophy.price * 0.3; }
   return { inventory: { ...result.inventory, bag, trophies: [] }, gold, sold, events: [...result.events, ...sold.map((itemId) => ({ type: 'sell' as const, itemId }))] };
 }
-export type BlessItemResult = { ok: false; reason: 'unknown_item' | 'already_blessed' | 'insufficient_gp' } | { ok: true; inventory: Inventory; god: GodState; events: InventoryEvent[] };
-/** Choice: no lock-count limit; GDD leaves prototype limit ambiguous. No charge on rejection. */
+export type BlessItemResult = { ok: false; reason: 'unknown_item' | 'already_blessed' | 'blessing_limit_reached' | 'insufficient_gp' } | { ok: true; inventory: Inventory; god: GodState; events: InventoryEvent[] };
+export type UnblessItemResult =
+  | { ok: false; reason: 'unknown_item' | 'not_blessed' | 'insufficient_gp' }
+  | { ok: true; inventory: Inventory; god: GodState; events: InventoryEvent[] };
+/** Choice: single blessed item limit; no charge on rejection. */
 export function blessItem(inventory: Inventory, god: GodState, id: string): BlessItemResult {
   assertInventory(inventory);
   const item = gear(inventory).find((i) => i.id === id);
   if (!item) return { ok: false, reason: 'unknown_item' };
   if (item.godBlessed) return { ok: false, reason: 'already_blessed' };
+  const hasOtherBlessed = gear(inventory).some((i) => i.godBlessed && i.id !== id);
+  if (hasOtherBlessed) return { ok: false, reason: 'blessing_limit_reached' };
   if (god.gp < ITEM_BLESSING_COST) return { ok: false, reason: 'insufficient_gp' };
   const blessed = { ...item, godBlessed: true };
   const equipped = { ...inventory.equipped };
   if (equipped[item.slot]?.id === id) equipped[item.slot] = blessed;
   return { ok: true, inventory: { ...inventory, equipped, bag: inventory.bag.map((i) => i.id === id ? blessed : i) }, god: { ...god, gp: god.gp - ITEM_BLESSING_COST }, events: [{ type: 'bless', itemId: id }] };
+}
+
+export function unblessItem(inventory: Inventory, god: GodState, id: string): UnblessItemResult {
+  assertInventory(inventory);
+  const all = gear(inventory);
+  const item = all.find((i) => i.id === id);
+  if (!item) return { ok: false, reason: 'unknown_item' };
+  if (!item.godBlessed) return { ok: false, reason: 'not_blessed' };
+  if (god.gp < ITEM_BLESSING_COST) return { ok: false, reason: 'insufficient_gp' };
+  const nextItem: GearItem = { ...item, godBlessed: false };
+  const equipped = { ...inventory.equipped };
+  for (const slot of GEAR_SLOTS) if (equipped[slot]?.id === id) equipped[slot] = nextItem;
+  const bag = inventory.bag.map((i) => (i.id === id ? nextItem : i));
+  return { ok: true, inventory: { ...inventory, equipped, bag }, god: { ...god, gp: god.gp - ITEM_BLESSING_COST }, events: [{ type: 'unbless', itemId: id }] };
 }
 export function applyDeathLoss(inventory: Inventory, gold: number, inputRng: RngState): { inventory: Inventory; gold: number; goldLost: number; lostItem: GearItem | null; rng: RngState; events: InventoryEvent[] } {
   assertInventory(inventory);

@@ -32,6 +32,7 @@ export function diaryLines(s: SessionState): DiaryLine[] {
         case 'upgrade': values.upgrade = t.t(`upgrade.${d.upgrade}`); values.level = d.level; values.cost = d.cost; break;
         case 'charge_used': values.amount = d.amount; break;
         case 'item_blessed': values.item = itemLabel(s, d.itemId); break;
+        case 'item_unblessed': values.item = itemLabel(s, d.itemId); break;
       }
     } else {
       const w = e as WorldEvent;

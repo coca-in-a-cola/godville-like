@@ -1,7 +1,7 @@
 /** Persistence-ready orchestration. Trusted states/content only; no platform clocks. */
 import { blessingHeal } from './fight.ts';
 import { GP_REGEN_INTERVAL_MS, requestIntervention } from './god.ts';
-import { blessItem, equipBest, inventoryCombatStats, inventoryMiracleEffects } from './inventory.ts';
+import { blessItem, unblessItem, equipBest, inventoryCombatStats, inventoryMiracleEffects } from './inventory.ts';
 import { rollBp } from './rng.ts';
 import { createWorldClock, scaleRealToGame, type GameSpeed, type WorldClock } from './time.ts';
 import { advanceWorld, createWorld, enterWorldDeathInPlace, type AdvanceOptions, type WorldCombatEvent, type GameData, type VoiceIntent, type WorldEvent, type WorldState, type WorldTuning } from './world.ts';
@@ -32,15 +32,17 @@ export type DivinePayload =
   | { type: 'voice'; keyword: VoiceIntent | null; obeyed: boolean }
   | { type: 'upgrade'; upgrade: FaithUpgrade; level: number; cost: number }
   | { type: 'charge_used'; amount: number }
-  | { type: 'item_blessed'; itemId: string };
+  | { type: 'item_blessed'; itemId: string }
+  | { type: 'item_unblessed'; itemId: string };
 export type DivineEvent = DivinePayload & { seq: number; atRealMs: number; atGameMs: number };
 export type SessionAction =
   | { type: 'blessing' | 'smite' }
   | { type: 'voice'; keyword: string }
   | { type: 'upgrade'; upgrade: FaithUpgrade }
   | { type: 'use_charge' }
-  | { type: 'bless_item'; itemId: string };
-export type SessionRejection = 'dead' | 'insufficient_gp' | 'insufficient_faith' | 'upgrade_cap' | 'no_charge' | 'insufficient_room' | 'in_combat' | 'unknown_item' | 'already_blessed' | 'fight_over' | 'target_doomed';
+  | { type: 'bless_item'; itemId: string }
+  | { type: 'unbless_item'; itemId: string };
+export type SessionRejection = 'dead' | 'insufficient_gp' | 'insufficient_faith' | 'upgrade_cap' | 'no_charge' | 'insufficient_room' | 'in_combat' | 'unknown_item' | 'already_blessed' | 'blessing_limit_reached' | 'not_blessed' | 'fight_over' | 'target_doomed';
 export type SessionActionResult = { ok: true; state: SessionState; events: DivineEvent[] } | { ok: false; state: SessionState; events: []; reason: SessionRejection };
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
 function emit(s: SessionState, payload: DivinePayload): DivineEvent {
@@ -118,6 +120,15 @@ export function actionSession(state: SessionState, _content: GameData, action: S
       w.god = result.god; h.inventory = equipBest(result.inventory, h).inventory;
       h.stats = inventoryCombatStats(h.base, h.inventory); h.hp = Math.min(h.hp, h.stats.maxHp);
       return done({ type: 'item_blessed', itemId: action.itemId });
+    }
+    case 'unbless_item': {
+      if (w.phase === 'dead' || h.hp <= 0) return reject('dead');
+      if (w.combat) return reject('in_combat');
+      const result = unblessItem(h.inventory, g, action.itemId);
+      if (!result.ok) return reject(result.reason);
+      w.god = result.god; h.inventory = equipBest(result.inventory, h).inventory;
+      h.stats = inventoryCombatStats(h.base, h.inventory); h.hp = Math.min(h.hp, h.stats.maxHp);
+      return done({ type: 'item_unblessed', itemId: action.itemId });
     }
     case 'voice': {
       if (w.phase === 'dead' || h.hp <= 0) return reject('dead');

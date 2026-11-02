@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HERO_BASE_STATS, applyDeathLoss, blessItem, buildItem, createGodState, emptyInventory, equipBest, inventoryCombatStats, inventoryMiracleEffects, inventoryStats, perceivedPower, pickupGear, pickupTrophy, seedRng, sellInTown, type GearItem, type Inventory } from '../src/index.ts';
+import { HERO_BASE_STATS, applyDeathLoss, blessItem, unblessItem, buildItem, createGodState, emptyInventory, equipBest, inventoryCombatStats, inventoryMiracleEffects, inventoryStats, perceivedPower, pickupGear, pickupTrophy, seedRng, sellInTown, type GearItem, type Inventory } from '../src/index.ts';
 import { lootData } from './loot-fixtures.ts';
 import { deepFreeze } from './fixtures.ts';
 const item = (id: string, power = 20, locked = false): GearItem => ({ ...buildItem(lootData, { id, baseId: 'sword', level: 0, baseStats: [], modifiers: [] }), power, godBlessed: locked });
@@ -49,6 +49,41 @@ describe('immutable inventory policy', () => {
       expect([...result.inventory.bag, result.inventory.equipped.weapon!].find((i) => i.id === id)?.godBlessed).toBe(true);
     }
     expect(god.gp).toBe(5); expect(inventory.bag[0]?.godBlessed).toBe(false);
+  });
+  it('enforces single blessed item rule and supports unbless with five GP cost and protection removal', () => {
+    const inv = deepFreeze(held([item('bag1'), item('bag2')]));
+    const god = deepFreeze(createGodState(10));
+    // Bless first item
+    const bless1 = blessItem(inv, god, 'bag1');
+    expect(bless1.ok).toBe(true);
+    if (!bless1.ok) throw new Error('bless failed');
+    expect(bless1.god.gp).toBe(5);
+    expect(bless1.inventory.bag.find(i => i.id === 'bag1')?.godBlessed).toBe(true);
+
+    // Attempting to bless a second item while one is blessed fails with blessing_limit_reached
+    const bless2 = blessItem(bless1.inventory, bless1.god, 'bag2');
+    expect(bless2).toEqual({ ok: false, reason: 'blessing_limit_reached' });
+
+    // Attempting to unbless an unblessed item fails with not_blessed
+    expect(unblessItem(bless1.inventory, bless1.god, 'bag2')).toEqual({ ok: false, reason: 'not_blessed' });
+
+    // Attempting unbless with insufficient GP (< 5) fails
+    expect(unblessItem(bless1.inventory, createGodState(4), 'bag1')).toEqual({ ok: false, reason: 'insufficient_gp' });
+
+    // Attempting unbless on missing item fails
+    expect(unblessItem(bless1.inventory, bless1.god, 'missing')).toEqual({ ok: false, reason: 'unknown_item' });
+
+    // Successfully unbless bag1
+    const unblessResult = unblessItem(bless1.inventory, bless1.god, 'bag1');
+    expect(unblessResult.ok).toBe(true);
+    if (!unblessResult.ok) throw new Error('unbless failed');
+    expect(unblessResult.god.gp).toBe(0);
+    expect(unblessResult.inventory.bag.find(i => i.id === 'bag1')?.godBlessed).toBe(false);
+    expect(unblessResult.events).toEqual([{ type: 'unbless', itemId: 'bag1' }]);
+
+    // Once unblessed, bag2 can now be blessed
+    const bless2After = blessItem(unblessResult.inventory, createGodState(5), 'bag2');
+    expect(bless2After.ok).toBe(true);
   });
   it('equips first, sells the weakest floor-half eligible gear and all trophies at 30%', () => {
     const inventory = deepFreeze({ ...held([item('locked', -100, true), item('weak', 1), item('middle', 2), item('strong', 3), item('strongest', 4)]), trophies: [{ id: 't', contentId: 'trophy', price: 50 }] });

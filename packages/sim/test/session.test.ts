@@ -152,7 +152,7 @@ describe('integrated interventions', () => {
   it('lethal punishment enters canonical death timeout; dead controls cannot heal/reward/resurrect early', () => {
     let s = travel(); s.world.hero.hp = 1; s.world.hero.gold = 100;
     s = act(s, { type: 'smite' }); expect(s.world.phase).toBe('dead'); expect(s.world.totals.deaths).toBe(1);
-    for (const a of [{ type: 'smite' }, { type: 'blessing' }, { type: 'voice', keyword: 'rest' }, { type: 'bless_item', itemId: 'starter_armor' }] as const) reject(s, a, 'dead');
+    for (const a of [{ type: 'smite' }, { type: 'blessing' }, { type: 'voice', keyword: 'rest' }, { type: 'bless_item', itemId: 'starter_armor' }, { type: 'unbless_item', itemId: 'starter_armor' }] as const) reject(s, a, 'dead');
     const before = advanceSession(s, c, 59999, 'watched').state; expect(before.world.hero.hp).toBe(0); expect(before.world.phase).toBe('dead');
     const next = advanceSession(before, c, 1, 'watched').state; expect(next.world.phase).toBe('town'); expect(next.world.hero.gold).toBe(75); expect(next.world.hero.hp).toBe(next.world.hero.stats.maxHp);
     expect(next.world.totals.deaths).toBe(1); expect(next.world.god.gp).toBe(75);
@@ -224,6 +224,13 @@ describe('paid Voice policy and item blessings', () => {
     expect(s.world.hero.stats).toEqual(inventoryCombatStats(s.world.hero.base, s.world.hero.inventory)); expect(s.world.hero.hp).toBe(500);
     reject(s, { type: 'bless_item', itemId: better.id }, 'already_blessed'); reject(s, { type: 'bless_item', itemId: 'unknown' }, 'unknown_item');
     const fighting = combat(); reject(fighting, { type: 'bless_item', itemId: 'starter_armor' }, 'in_combat');
+    reject(fighting, { type: 'unbless_item', itemId: 'starter_armor' }, 'in_combat');
+    reject(s, { type: 'unbless_item', itemId: 'unknown' }, 'unknown_item');
+    reject(s, { type: 'unbless_item', itemId: 'starter_weapon' }, 'not_blessed');
+    s = act(s, { type: 'unbless_item', itemId: better.id });
+    expect(s.world.god.gp).toBe(90);
+    expect(s.world.hero.inventory.equipped.armor?.godBlessed).toBe(false);
+    expect(s.diary[s.diary.length - 1]?.type).toBe('item_unblessed');
   });
   it('bounds localization-friendly divine logs and never allows action mutation', () => {
     let s = travel(); const initial = saveSession(s);

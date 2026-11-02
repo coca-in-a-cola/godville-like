@@ -52,6 +52,7 @@ const divineEvent = z.discriminatedUnion('type', [
   obj({ ...divineBase, type: z.literal('upgrade'), upgrade, level: uint.max(10), cost: uint }),
   obj({ ...divineBase, type: z.literal('charge_used'), amount: uint }),
   obj({ ...divineBase, type: z.literal('item_blessed'), itemId: id }),
+  obj({ ...divineBase, type: z.literal('item_unblessed'), itemId: id }),
 ]) satisfies z.ZodType<DivineEvent>;
 const duration = uint.min(100).max(1e12).multipleOf(100);
 const bp = uint.max(10000);
