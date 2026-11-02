@@ -1,7 +1,7 @@
 /** Headless host adapter. Importing this module reads no DOM, storage, clocks or workers. */
 import { signal } from '@preact/signals';
 import { actionSession, advanceSession, createSession, deriveForecastSeed, type FightState, type ForecastResult, type GameData, type GameSpeed, type SessionAction, type SessionActionResult, type SessionState, type WorldCombatEvent, type WorldEvent } from '@godville/sim';
-import { createPersistence, DEFAULT_PROFILE, type StoragePort } from './persistence.ts';
+import { createPersistence, DEFAULT_PROFILE, SAVE_KEY, type StoragePort } from './persistence.ts';
 import type { PlayerProfile } from './sessionSchema.ts';
 import type { OwnershipPort } from './ownership.ts';
 export interface ForecastPort { forecast(state: FightState, seed: number): Promise<ForecastResult>; dispose(): void }
@@ -212,6 +212,19 @@ export function createGameRuntime(options: RuntimeOptions) {
     pageHide(); stopped = true; generation++; forecast.value = null; status.value = 'stopped';
     options.forecast?.dispose(); options.ownership.release();
   }
-  return { canonicalSession, loading, catchingUp, status, progress, errors, forecast, combatLog, combatSummary, profile, started, timeScale, setTimeScale, startGame, start, tick, setVisible, userAction, requestForecast, flush, pageHide, stop };
+  function resetGame() {
+    try {
+      options.storage.removeItem(SAVE_KEY);
+    } catch { /* best effort */ }
+    segments.splice(0);
+    canonicalSession.value = null;
+    started.value = false;
+    combatLog.value = [];
+    combatSummary.value = null;
+    forecast.value = null;
+    errors.value = [];
+    generation++;
+  }
+  return { canonicalSession, loading, catchingUp, status, progress, errors, forecast, combatLog, combatSummary, profile, started, timeScale, setTimeScale, startGame, resetGame, start, tick, setVisible, userAction, requestForecast, flush, pageHide, stop };
 }
 export type GameRuntime = ReturnType<typeof createGameRuntime>;

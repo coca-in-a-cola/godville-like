@@ -40,6 +40,7 @@ export interface AudioEngine {
   playSmite(): void;
   playBlessing(): void;
   playLevelUp(): void;
+  playMonsterSound(family: string): void;
   setFastForward(fast: boolean): void;
   dispose(): void;
 }
@@ -299,6 +300,46 @@ export function createCalmMusic(seed = 20261102): AudioEngine {
         osc.start(now + i * 0.1);
         osc.stop(now + i * 0.1 + 0.55);
       });
+    },
+
+    playMonsterSound(family: string) {
+      if (!ctx || !sfxGain || isFastForward || !musicOn) return;
+      if (document.visibilityState === 'hidden') return;
+      const now = ctx.currentTime;
+      switch (family) {
+        case 'spider':
+          // Rapid high chittering clicks
+          [1600, 1200, 1800, 1400].forEach((freq, i) => {
+            const osc = ctx!.createOscillator();
+            const gain = ctx!.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.03);
+            gain.gain.setValueAtTime(0.08, now + i * 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.03 + 0.025);
+            osc.connect(gain).connect(sfxGain!);
+            osc.start(now + i * 0.03);
+            osc.stop(now + i * 0.03 + 0.03);
+          });
+          break;
+        case 'golem':
+          // Heavy seismic thud / subterranean grind
+          playTone(85, 30, 0.22, 0.24, 'triangle');
+          playTone(45, 20, 0.35, 0.28, 'sawtooth');
+          break;
+        case 'wraith':
+          // Ethereal ghostly descending wail
+          playTone(580, 190, 0.32, 0.15, 'sine');
+          break;
+        case 'leech':
+          // Squelch / suction pop
+          playTone(180, 520, 0.11, 0.16, 'triangle');
+          break;
+        case 'brute':
+        default:
+          // Guttural roaring growl
+          playTone(160, 55, 0.24, 0.22, 'sawtooth');
+          break;
+      }
     },
 
     dispose() {

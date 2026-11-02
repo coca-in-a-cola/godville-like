@@ -5,10 +5,25 @@ import { n, passportLine } from '../viewFormat.ts';
 export function Meter({ label, value, max, text, kind = '' }: { label: string; value: number; max: number; text: string; kind?: string }) {
   return <div class={`ledger-meter ${kind}`} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}><span class="meter-fill" style={{ width: `${Math.max(0, Math.min(100, value / Math.max(1,max) * 100))}%` }} /><span class="meter-label">{text}</span></div>;
 }
-const PORTRAIT_HUES = [28, 140, 205, 265, 345, 55];
 export function Portrait({ profile }: { profile: PlayerProfile }) {
-  const index = Math.max(0, Number(profile.portraitId.replace(/\D/g, '')) - 1) % PORTRAIT_HUES.length;
-  return <span class="portrait" role="img" aria-label={t.t('ui.portraitAlt', { hero: profile.heroName })} style={`--portrait-hue:${PORTRAIT_HUES[index]!}`}>{profile.heroName.trim().charAt(0).toUpperCase()}</span>;
+  const portraitId = profile.portraitId || 'portrait_1';
+  return (
+    <span class="portrait" role="img" aria-label={t.t('ui.portraitAlt', { hero: profile.heroName })}>
+      <img
+        src={`./assets/${portraitId}.png`}
+        alt={profile.heroName}
+        width={48}
+        height={48}
+        class="portrait-img"
+        onError={(e) => {
+          // Graceful fallback to initial if image fails
+          const target = e.currentTarget as HTMLElement;
+          target.style.display = 'none';
+          if (target.parentElement) target.parentElement.textContent = profile.heroName.trim().charAt(0).toUpperCase();
+        }}
+      />
+    </span>
+  );
 }
 export function HeroCard({ session: s, profile }: { session: SessionState; profile: PlayerProfile }) {
   const h = s.world.hero;

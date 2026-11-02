@@ -108,7 +108,7 @@ export function StartScreen({ runtime }: { runtime: GameRuntime }) {
                   aria-checked={selectedPortrait === p}
                   aria-label={`Portrait ${idx + 1}`}
                 >
-                  <span class="portrait-number">{idx + 1}</span>
+                  <img src={`./assets/${p}.png`} width={48} height={48} alt={`Portrait ${idx + 1}`} class="portrait-thumb" />
                 </button>
               ))}
             </div>

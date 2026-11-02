@@ -49,6 +49,7 @@ function ControlRow({ runtime: r, compact, onCompact }: { runtime: GameRuntime; 
       <p><MusicControls /></p>
       <label class="compact"><input type="checkbox" checked={compact} onChange={event => onCompact(event.currentTarget.checked)} />{t.t('ui.compact')}</label>
       <p class="hint">{t.t('ui.preferencesHint')}</p>
+      <p><button type="button" class="btn-danger" onClick={() => { if (window.confirm(t.t('ui.confirmReset'))) { r.resetGame(); dialog.current?.close(); } }}>{t.t('ui.resetProgress')}</button></p>
       <button>{t.t('ui.close')}</button></form></dialog>
   </nav>;
 }
@@ -84,6 +85,7 @@ function useMusic(profileMusic: boolean, r: GameRuntime, s: SessionState | null)
   const combatLog = r.combatLog.value;
   const worldNextSeq = s?.world.nextEventSeq;
   const lastWorldEvent = s?.world.diary.at(-1);
+  const monsterFamily = s?.world.combat?.monster.family ?? null;
 
   // Event-driven SFX
   useEffect(() => {
@@ -96,8 +98,13 @@ function useMusic(profileMusic: boolean, r: GameRuntime, s: SessionState | null)
       for (const entry of newEntries) {
         const ev = entry.event;
         if (ev.type === 'hit') {
-          if (ev.crit) engine.playCrit();
-          else engine.playHit();
+          if (ev.attacker === 'monster' && monsterFamily) {
+            engine.playMonsterSound(monsterFamily);
+          } else if (ev.crit) {
+            engine.playCrit();
+          } else {
+            engine.playHit();
+          }
         } else if (ev.type === 'dodge') {
           engine.playDodge();
         } else if (ev.type === 'god') {
@@ -115,7 +122,7 @@ function useMusic(profileMusic: boolean, r: GameRuntime, s: SessionState | null)
       }
       lastWorldSeq.current = worldNextSeq;
     }
-  }, [combatLog, worldNextSeq, lastWorldEvent, isFast]);
+  }, [combatLog, worldNextSeq, lastWorldEvent, isFast, monsterFamily]);
 }
 
 export function GameView({ runtime: r }: { runtime: GameRuntime }) {

@@ -1,7 +1,7 @@
 {
-  "app.title": "Combat sandbox",
+  "app.title": "God-like",
   "app.subtitle": "Isolated deterministic fight test bench. Your saved hero is not affected.",
-  "ui.title": "The Divine Ledger",
+  "ui.title": "God-like",
   "ui.edition": "An account of improbable heroism",
   "ui.subtitle": "One hero. One road. Occasional divine interference.",
   "ui.localOnly": "Private chronicle · saved in this browser",
@@ -347,7 +347,7 @@
   "outcome.draw": "Draw: both fall in the same tick.",
   "outcome.summary": "{seconds} s of game time · {hits, plural, one {# hit} other {# hits}} · {crits, plural, one {# crit} other {# crits}} · {dodges, plural, one {# dodge} other {# dodges}} · {counters, plural, one {# counter} other {# counters}}",
 
-  "start.title": "Godville",
+  "start.title": "God-like",
   "start.lore1": "The hero needs a god. The god needs entertainment.",
   "start.lore2": "The road to Godville stretches ahead, paved with good intentions and questionable decisions.",
   "start.heroLabel": "Hero Name",
@@ -427,5 +427,8 @@
   "ui.combatVs": "In combat with {monster}",
   "ui.whileAway": "While you were away: covered {miles} mi, defeated {kills} monsters, completed {quests} quests, gained {gold} gold.",
   "ui.whileAwayData": "{kills} kills · {miles} mi · {quests} quests · +{gold} gold",
-  "ui.combatDetails": "Combat log"
+  "ui.combatDetails": "Combat log",
+  "ui.resetProgress": "Reset Progress & Restart",
+  "ui.confirmReset": "Are you sure you want to erase all progress and restart from the beginning?",
+  "ui.restartGame": "Start New Adventure"
 }

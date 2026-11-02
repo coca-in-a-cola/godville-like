@@ -101,18 +101,27 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
 
     // 4. Render Modes
     if (phase === 'town') {
-      // Town Buildings
+      // Procedural Town Architecture (colors seeded by town id)
+      const townId = w.hero.currentTownId || 'godville';
+      const townPalettes: Record<string, { walls: string[]; roof: string; accent: string; window: string }> = {
+        godville: { walls: ['#663931', '#8f563b', '#76428a', '#4b692f'], roof: '#ac3232', accent: '#222034', window: goldColor },
+        tradeburg: { walls: ['#306082', '#3f3f74', '#264e68', '#323c39'], roof: '#5b6ee1', accent: '#151620', window: '#d9a066' },
+        beerburgh: { walls: ['#45283c', '#524b24', '#663931', '#3a2230'], roof: '#df7126', accent: '#222034', window: '#fbf236' },
+        godvillewood: { walls: ['#323c39', '#4b692f', '#37946e', '#25352b'], roof: '#6abe30', accent: '#18241c', window: '#5fcde4' },
+      };
+      const pal = townPalettes[townId] ?? townPalettes.godville!;
+
       const buildings = [
-        { x: 40, w: 44, h: 36, label: 'TAVERN', color: '#663931' },
-        { x: 100, w: 52, h: 42, label: 'MARKET', color: '#8f563b' },
-        { x: 170, w: 48, h: 48, label: 'TEMPLE', color: '#76428a' },
-        { x: 236, w: 42, h: 34, label: 'INN', color: '#4b692f' },
+        { x: 40, w: 44, h: 36, label: 'TAVERN', color: pal.walls[0]! },
+        { x: 100, w: 52, h: 42, label: 'MARKET', color: pal.walls[1]! },
+        { x: 170, w: 48, h: 48, label: 'TEMPLE', color: pal.walls[2]! },
+        { x: 236, w: 42, h: 34, label: 'INN', color: pal.walls[3]! },
       ];
       for (const b of buildings) {
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
         // Roof
-        ctx.fillStyle = '#ac3232';
+        ctx.fillStyle = pal.roof;
         ctx.beginPath();
         ctx.moveTo(b.x - 4, GROUND_Y - b.h);
         ctx.lineTo(b.x + b.w / 2, GROUND_Y - b.h - 10);
@@ -120,9 +129,9 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
         ctx.closePath();
         ctx.fill();
         // Door & window
-        ctx.fillStyle = '#222034';
+        ctx.fillStyle = pal.accent;
         ctx.fillRect(b.x + b.w / 2 - 4, GROUND_Y - 14, 8, 14);
-        ctx.fillStyle = goldColor;
+        ctx.fillStyle = pal.window;
         ctx.fillRect(b.x + 6, GROUND_Y - b.h + 8, 6, 6);
         ctx.fillRect(b.x + b.w - 12, GROUND_Y - b.h + 8, 6, 6);
       }
