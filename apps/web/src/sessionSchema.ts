@@ -66,6 +66,29 @@ const world = obj({
   totals: obj({ kills: uint, deaths: uint, quests: uint, miles: resource, fled: uint }),
 }).transform(clean).refine(s => s.hero.hp <= s.hero.stats.maxHp && s.god.gp <= s.god.gpMax && (s.phase === 'combat') === (s.combat !== null) && (s.phase !== 'dead' || s.hero.hp === 0) && s.diary.length <= s.tuning.diaryLimit && s.diary.every(e => e.seq < s.nextEventSeq && e.atMs <= s.elapsedMs));
 export const sessionSchema = obj({ schemaVersion: z.literal(1), world, clock: obj({ carry: uint.max(9) }), realElapsedMs: uint, upgrades: obj({ capacity: uint.max(10), flow: uint.max(10), miracle: uint.max(10), clarity: uint.max(7) }), charges: uint.max(3), overflowGp: uint.max(99), nextEventSeq: uint, diary: z.array(divineEvent).max(60) }).refine(s => s.world.god.gpMax === 100 + s.upgrades.capacity * 25 && (s.charges < 3 || s.overflowGp === 0) && s.diary.every(e => e.seq < s.nextEventSeq && e.atRealMs <= s.realElapsedMs && e.atGameMs <= s.world.elapsedMs)) satisfies z.ZodType<SessionState>;
+export const playerProfileSchema = z.strictObject({
+  heroName: z.string().min(1).max(100),
+  godName: z.string().min(1).max(100),
+  portraitId: z.string().min(1).max(50),
+  calmMusic: z.boolean(),
+});
+export type PlayerProfile = z.infer<typeof playerProfileSchema>;
+
 const pendingSegment = obj({ end: uint, speed: z.enum(['watched', 'unwatched']) });
-export const saveEnvelopeSchema = obj({ version: z.literal(1), savedAtMs: uint, session: sessionSchema, pending: z.array(pendingSegment).optional() }).refine(s => (s.pending ?? []).every((segment, i, all) => segment.end > (i === 0 ? s.savedAtMs : all[i - 1]!.end)));
-export interface SaveEnvelope { version: 1; savedAtMs: number; session: SessionState; pending?: { end: number; speed: 'watched' | 'unwatched' }[] }
+const saveEnvelopeV1Schema = obj({
+  version: z.literal(1),
+  savedAtMs: uint,
+  session: sessionSchema,
+  pending: z.array(pendingSegment).optional(),
+}).refine(s => (s.pending ?? []).every((segment, i, all) => segment.end > (i === 0 ? s.savedAtMs : all[i - 1]!.end)));
+const saveEnvelopeV2Schema = obj({
+  version: z.literal(2),
+  savedAtMs: uint,
+  session: sessionSchema,
+  profile: playerProfileSchema,
+  pending: z.array(pendingSegment).optional(),
+}).refine(s => (s.pending ?? []).every((segment, i, all) => segment.end > (i === 0 ? s.savedAtMs : all[i - 1]!.end)));
+export const saveEnvelopeSchema = z.union([saveEnvelopeV1Schema, saveEnvelopeV2Schema]);
+export type SaveEnvelope =
+  | { version: 1; savedAtMs: number; session: SessionState; pending?: { end: number; speed: 'watched' | 'unwatched' }[] }
+  | { version: 2; savedAtMs: number; session: SessionState; profile: PlayerProfile; pending?: { end: number; speed: 'watched' | 'unwatched' }[] };

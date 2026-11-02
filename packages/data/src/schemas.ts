@@ -76,6 +76,11 @@ export const balanceRow = z.strictObject({
   defense_per_level: decimal,
 });
 
+export const nameRow = z.strictObject({
+  id,
+  name_en: name,
+});
+
 export const DATA_SCHEMAS = {
   monsters: monsterRow,
   towns: townRow,
@@ -83,6 +88,7 @@ export const DATA_SCHEMAS = {
   bases: baseRow,
   modifiers: modifierRow,
   balance: balanceRow,
+  names: nameRow,
 } as const;
 
 export type DataFileName = keyof typeof DATA_SCHEMAS;
@@ -94,6 +100,7 @@ export type TrophyRow = z.output<typeof trophyRow>;
 export type BaseRow = z.output<typeof baseRow>;
 export type ModifierRow = z.output<typeof modifierRow>;
 export type BalanceRow = z.output<typeof balanceRow>;
+export type NameRow = z.output<typeof nameRow>;
 
 export interface DataRows {
   monsters: MonsterRow;
@@ -102,4 +109,5 @@ export interface DataRows {
   bases: BaseRow;
   modifiers: ModifierRow;
   balance: BalanceRow;
+  names: NameRow;
 }

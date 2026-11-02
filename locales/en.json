@@ -345,5 +345,19 @@
   "outcome.hero_won": "Victory: {monster} is defeated.",
   "outcome.monster_won": "Defeat: the hero falls to {monster}.",
   "outcome.draw": "Draw: both fall in the same tick.",
-  "outcome.summary": "{seconds} s of game time · {hits, plural, one {# hit} other {# hits}} · {crits, plural, one {# crit} other {# crits}} · {dodges, plural, one {# dodge} other {# dodges}} · {counters, plural, one {# counter} other {# counters}}"
+  "outcome.summary": "{seconds} s of game time · {hits, plural, one {# hit} other {# hits}} · {crits, plural, one {# crit} other {# crits}} · {dodges, plural, one {# dodge} other {# dodges}} · {counters, plural, one {# counter} other {# counters}}",
+
+  "start.title": "Godville",
+  "start.lore1": "The hero needs a god. The god needs entertainment.",
+  "start.lore2": "The road to Godville stretches ahead, paved with good intentions and questionable decisions.",
+  "start.heroLabel": "Hero Name",
+  "start.heroPlaceholder": "e.g. {name}",
+  "start.reroll": "Reroll random name",
+  "start.godLabel": "Deity / God Name",
+  "start.godPlaceholder": "The Almighty",
+  "start.defaultGodName": "The Almighty",
+  "start.portraitLabel": "Choose Portrait",
+  "start.calmMusic": "♪ Calm music",
+  "start.submit": "Start game",
+  "start.optionalHint": "Optional: leave blank for default or suggestion"
 }

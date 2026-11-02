@@ -5,6 +5,7 @@ import { translator as t } from './gameData.ts';
 import { HeroPanel } from './views/HeroPanel.tsx';
 import { LivePanel } from './views/LivePanel.tsx';
 import { GodPanel } from './views/GodPanel.tsx';
+import { StartScreen } from './views/StartScreen.tsx';
 export type Act = (action: SessionAction) => Promise<void>;
 export function GameView({ runtime: r }: { runtime: GameRuntime }) {
   const [message, setMessage] = useState('');
@@ -20,6 +21,11 @@ export function GameView({ runtime: r }: { runtime: GameRuntime }) {
     } catch (error) { setMessage(t.t('ui.actionFailed', { error: String(error) })); }
     finally { setPending(false); }
   };
+
+  if (!r.loading.value && !r.started.value) {
+    return <StartScreen runtime={r} />;
+  }
+
   return <main class="ledger">
     <header class="masthead"><div><p class="eyebrow">{t.t('ui.edition')}</p><h1>{t.t('ui.title')}</h1><p>{t.t('ui.subtitle')}</p></div><div class="edition"><span>{t.t('ui.localOnly')}</span><span>{t.t('ui.clockRule')}</span><a href="?sandbox=1">{t.t('ui.sandbox')}</a></div></header>
     <nav class="mobile-nav" aria-label={t.t('ui.sections')}><a href="#hero">{t.t('ui.hero')}</a><a href="#live">{t.t('ui.live')}</a><a href="#god">{t.t('god.title')}</a></nav>

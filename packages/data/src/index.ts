@@ -14,6 +14,8 @@ export {
   type MonsterRow,
   type TownRow,
   type TrophyRow,
+  type NameRow,
+  nameRow,
 } from './schemas.ts';
 export {
   DataValidationError,

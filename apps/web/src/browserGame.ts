@@ -15,7 +15,7 @@ export function createBrowserGame() {
   // Access failures are forwarded through the runtime's fail-closed storage boundary.
   const storage = { getItem: (key: string) => localStorage.getItem(key), setItem: (key: string, value: string) => localStorage.setItem(key, value), removeItem: (key: string) => localStorage.removeItem(key) };
   const ownership = navigator.locks ? webLockOwnership(navigator.locks) : leaseOwnership(storage, crypto.randomUUID(), Date.now, () => new Promise(resolve => setTimeout(resolve, 30)));
-  const runtime = createGameRuntime({ content: gameData, seed: () => crypto.getRandomValues(new Uint32Array(1))[0]!, storage, ownership, now: Date.now, monotonicNow: () => performance.now(), yieldTask, visible: document.visibilityState === 'visible', catchupChunkMs: 10000,
+  const runtime = createGameRuntime({ content: gameData, seed: () => crypto.getRandomValues(new Uint32Array(1))[0]!, storage, ownership, now: Date.now, monotonicNow: () => performance.now(), yieldTask, visible: document.visibilityState === 'visible', catchupChunkMs: 10000, requireStart: true,
     forecast: { forecast: (state, seed) => api.forecast(state, seed), dispose: () => { api[releaseProxy](); worker.terminate(); } } });
   let disposed = false;
   const frame = setInterval(() => { void runtime.tick(); }, 100);

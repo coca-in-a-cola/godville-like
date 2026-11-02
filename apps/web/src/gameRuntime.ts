@@ -1,7 +1,8 @@
 /** Headless host adapter. Importing this module reads no DOM, storage, clocks or workers. */
 import { signal } from '@preact/signals';
 import { actionSession, advanceSession, createSession, deriveForecastSeed, type FightState, type ForecastResult, type GameData, type GameSpeed, type SessionAction, type SessionActionResult, type SessionState, type WorldCombatEvent, type WorldEvent } from '@godville/sim';
-import { createPersistence, type StoragePort } from './persistence.ts';
+import { createPersistence, DEFAULT_PROFILE, type StoragePort } from './persistence.ts';
+import type { PlayerProfile } from './sessionSchema.ts';
 import type { OwnershipPort } from './ownership.ts';
 export interface ForecastPort { forecast(state: FightState, seed: number): Promise<ForecastResult>; dispose(): void }
 export interface RuntimeOptions {
@@ -10,6 +11,7 @@ export interface RuntimeOptions {
   forecast?: ForecastPort; visible?: boolean;
   /** Browser replay batching only; default preserves the narrow headless contract. */
   catchupChunkMs?: number;
+  requireStart?: boolean;
 }
 export function createGameRuntime(options: RuntimeOptions) {
   const canonicalSession = signal<SessionState | null>(null);
@@ -21,10 +23,12 @@ export function createGameRuntime(options: RuntimeOptions) {
   const forecast = signal<{ fightId: string; tick: number; result: ForecastResult } | null>(null);
   const combatLog = signal<readonly WorldCombatEvent[]>([]);
   const combatSummary = signal<WorldEvent | null>(null);
+  const profile = signal<PlayerProfile>(DEFAULT_PROFILE);
+  const started = signal<boolean>(false);
   const persistence = createPersistence(options.storage);
   let visible = options.visible ?? true;
   let stopped = false;
-  let started = false;
+  let initialized = false;
   let observedAt = 0;
   let accountedAt = 0;
   let generation = 0;
@@ -83,7 +87,7 @@ export function createGameRuntime(options: RuntimeOptions) {
   }
   function flush(): boolean {
     if (!canonicalSession.value || !owned()) return false;
-    try { return persistence.save(canonicalSession.value, accountedAt, segments.map(({ end, speed }) => ({ end, speed }))); } catch (error) { fail(error); return false; }
+    try { return persistence.save(canonicalSession.value, accountedAt, profile.value, segments.map(({ end, speed }) => ({ end, speed }))); } catch (error) { fail(error); return false; }
   }
   function pump(): Promise<void> {
     if (pumping) return pumping;
@@ -105,39 +109,67 @@ export function createGameRuntime(options: RuntimeOptions) {
     return pumping;
   }
   async function start() {
-    if (started) throw new Error('Runtime already started');
-    started = true;
+    if (initialized) throw new Error('Runtime already started');
+    initialized = true;
     try {
       const acquired = await options.ownership.acquire();
       if (stopped) { options.ownership.release(); return; }
       const loaded = persistence.load();
       if (loaded.kind === 'error') { fail(loaded.error); return; }
-      observedAt = accountedAt = loaded.kind === 'saved' ? loaded.envelope.savedAtMs : clock();
-      canonicalSession.value = loaded.kind === 'saved' ? loaded.envelope.session : createSession(options.content, typeof options.seed === 'function' ? options.seed() : options.seed);
-      if (loaded.kind === 'saved' && loaded.envelope.pending?.length) {
-        segments.push(...loaded.envelope.pending.map(segment => ({ ...segment, collect: false })));
-        observedAt = segments.at(-1)!.end;
-        progress.value = { completedMs: 0, totalMs: observedAt - accountedAt };
+      if (loaded.kind === 'saved') {
+        started.value = true;
+        profile.value = loaded.envelope.version === 2 ? loaded.envelope.profile : DEFAULT_PROFILE;
+        observedAt = accountedAt = loaded.envelope.savedAtMs;
+        canonicalSession.value = loaded.envelope.session;
+        if (loaded.envelope.pending?.length) {
+          segments.push(...loaded.envelope.pending.map(segment => ({ ...segment, collect: false })));
+          observedAt = segments.at(-1)!.end;
+          progress.value = { completedMs: 0, totalMs: observedAt - accountedAt };
+        }
+        if (!acquired) { status.value = 'readonly'; return; }
+        status.value = 'ready';
+        capture('unwatched', false);
+        await pump();
+      } else if (options.requireStart) {
+        started.value = false;
+        canonicalSession.value = null;
+        status.value = acquired ? 'ready' : 'readonly';
+        loading.value = false;
+        return;
+      } else {
+        started.value = true;
+        profile.value = DEFAULT_PROFILE;
+        observedAt = accountedAt = clock();
+        canonicalSession.value = createSession(options.content, typeof options.seed === 'function' ? options.seed() : options.seed);
+        if (!acquired) { status.value = 'readonly'; return; }
+        status.value = 'ready';
+        capture('unwatched', false);
+        await pump();
       }
-      if (!acquired) { status.value = 'readonly'; return; }
-      status.value = 'ready';
-      capture('unwatched', false);
-      await pump();
     } catch (error) { fail(error); }
     finally { loading.value = false; }
   }
+  async function startGame(customProfile: PlayerProfile) {
+    profile.value = customProfile;
+    canonicalSession.value = createSession(options.content, typeof options.seed === 'function' ? options.seed() : options.seed);
+    observedAt = accountedAt = clock();
+    started.value = true;
+    flush();
+    capture('watched', true);
+    await pump();
+  }
   async function tick() {
-    if (loading.value || !owned()) return;
+    if (!started.value || loading.value || !owned()) return;
     try { capture(visible ? 'watched' : 'unwatched', visible); await pump(); } catch (error) { fail(error); }
   }
   async function setVisible(value: boolean) {
     if (value === visible) return;
-    if (!loading.value && owned()) capture(visible ? 'watched' : 'unwatched', visible);
+    if (started.value && !loading.value && owned()) capture(visible ? 'watched' : 'unwatched', visible);
     visible = value; generation++; forecast.value = null;
-    if (!loading.value) await pump();
+    if (started.value && !loading.value) await pump();
   }
   async function userAction(action: SessionAction): Promise<SessionActionResult | null> {
-    if (loading.value || !owned()) return null;
+    if (!started.value || loading.value || !owned()) return null;
     await tick();
     if (!canonicalSession.value || !owned()) return null;
     const result = actionSession(canonicalSession.value, options.content, action);
@@ -147,7 +179,7 @@ export function createGameRuntime(options: RuntimeOptions) {
   async function requestForecast() {
     const state = canonicalSession.value;
     const active = state?.world.combat;
-    if (!options.forecast || loading.value || catchingUp.value || !owned() || !visible || forecasting || !active || active.fight.outcome || active.fight === lastForecastInput) return;
+    if (!started.value || !options.forecast || loading.value || catchingUp.value || !owned() || !visible || forecasting || !active || active.fight.outcome || active.fight === lastForecastInput) return;
     const time = options.monotonicNow();
     if (time - lastForecastAt < 1000) return;
     lastForecastAt = time; lastForecastInput = active.fight; forecasting = true;
@@ -160,7 +192,7 @@ export function createGameRuntime(options: RuntimeOptions) {
   }
   /** Synchronous lifecycle flush: one bounded slice only; timestamp never claims unsimulated time. */
   function pageHide() {
-    if (loading.value || !owned()) return;
+    if (!started.value || loading.value || !owned()) return;
     try {
       capture(visible ? 'watched' : 'unwatched', visible); visible = false; generation++; forecast.value = null;
       advanceOne(1000); flush();
@@ -171,6 +203,6 @@ export function createGameRuntime(options: RuntimeOptions) {
     pageHide(); stopped = true; generation++; forecast.value = null; status.value = 'stopped';
     options.forecast?.dispose(); options.ownership.release();
   }
-  return { canonicalSession, loading, catchingUp, status, progress, errors, forecast, combatLog, combatSummary, start, tick, setVisible, userAction, requestForecast, flush, pageHide, stop };
+  return { canonicalSession, loading, catchingUp, status, progress, errors, forecast, combatLog, combatSummary, profile, started, startGame, start, tick, setVisible, userAction, requestForecast, flush, pageHide, stop };
 }
 export type GameRuntime = ReturnType<typeof createGameRuntime>;

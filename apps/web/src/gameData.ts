@@ -8,8 +8,9 @@ import monsters from '../../../data/monsters.csv?raw';
 import towns from '../../../data/towns.csv?raw';
 import trophies from '../../../data/trophies.csv?raw';
 import balance from '../../../data/balance.csv?raw';
+import names from '../../../data/names.csv?raw';
 import { createTranslator, type Translator } from './i18n.ts';
 
-export const gameData: GameData = loadGameData({ monsters, towns, trophies, bases, modifiers, balance });
+export const gameData: GameData = loadGameData({ monsters, towns, trophies, bases, modifiers, balance, names });
 
 export const translator: Translator = createTranslator(en, 'en');
