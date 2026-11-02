@@ -1,5 +1,6 @@
 import { render } from 'preact';
 import { translator } from './gameData.ts';
+import { applyTheme } from './settings.ts';
 import './styles.css';
 import './game.css';
 
@@ -14,6 +15,7 @@ if (sandbox) {
 } else {
   const [{ GameView }, { createBrowserGame }] = await Promise.all([import('./gameView.tsx'), import('./browserGame.ts')]);
   document.title = translator.t('ui.title');
+  applyTheme();
   const game = createBrowserGame();
   render(<GameView runtime={game.runtime} />, document.getElementById('app')!);
   if (import.meta.hot) import.meta.hot.dispose(game.dispose);

@@ -5,9 +5,17 @@ export const n = (value: number) => t.number(value, { maximumFractionDigits: 1 }
 export function contentName(kind: 'towns' | 'monsters' | 'trophies', id: string): string {
   return gameData[kind].find(row => row.id === id)?.name_en ?? t.t('ui.unknown');
 }
-export function questName(id: string): string {
+function questIndex(id: string): number {
   let hash = 0; for (const char of id) hash = (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0;
-  return t.t(`quest.${hash % 5}`);
+  return hash % 5;
+}
+export function questName(id: string): string { return t.t(`quest.${questIndex(id)}`); }
+export function questNarrative(id: string): string { return t.t(`quest.narrative.${questIndex(id)}`); }
+/** One of six humorous passport lines, fixed per world seed. */
+export function passportLine(s: SessionState): string { return t.t(`passport.${s.world.seed % 6}`); }
+/** Absolute road mile: the current town's base mile plus distance walked from it. */
+export function absoluteMile(s: SessionState): number {
+  return (gameData.towns.find(row => row.id === s.world.hero.currentTownId)?.base_mile ?? 0) + s.world.hero.distance;
 }
 function itemLabel(session: SessionState, id: string | null): string {
   const inv = session.world.hero.inventory;

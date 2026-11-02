@@ -25,6 +25,8 @@ export function createGameRuntime(options: RuntimeOptions) {
   const combatSummary = signal<WorldEvent | null>(null);
   const profile = signal<PlayerProfile>(DEFAULT_PROFILE);
   const started = signal<boolean>(false);
+  /** Dev-only real-time multiplier (0 = paused). Persisted pending time always replays at 1×. */
+  const timeScale = signal(1);
   const persistence = createPersistence(options.storage);
   let visible = options.visible ?? true;
   let stopped = false;
@@ -36,7 +38,7 @@ export function createGameRuntime(options: RuntimeOptions) {
   let lastForecastAt = -Infinity;
   let lastForecastInput: FightState | null = null;
   let pumping: Promise<void> | null = null;
-  const segments: { end: number; speed: GameSpeed; collect: boolean }[] = [];
+  const segments: { end: number; speed: GameSpeed; collect: boolean; scale: number }[] = [];
   const maxChunkMs = Math.max(1000, Math.min(10000, Math.floor(options.catchupChunkMs ?? 1000)));
   let chunkMs = Math.min(5000, maxChunkMs);
   function report(error: unknown) { errors.value = [...errors.value, String(error)].slice(-10); }
@@ -59,8 +61,9 @@ export function createGameRuntime(options: RuntimeOptions) {
     }
     if (time === observedAt) return;
     const tail = segments.at(-1);
-    if (tail && tail.speed === speed && tail.collect === collect) tail.end = time;
-    else segments.push({ end: time, speed, collect });
+    const scale = timeScale.value;
+    if (tail && tail.speed === speed && tail.collect === collect && tail.scale === scale) tail.end = time;
+    else segments.push({ end: time, speed, collect, scale });
     progress.value = { completedMs: progress.value.completedMs, totalMs: progress.value.totalMs + time - observedAt };
     observedAt = time;
   }
@@ -70,7 +73,7 @@ export function createGameRuntime(options: RuntimeOptions) {
     const amount = Math.min(limit, segment.end - accountedAt);
     const previousId = canonicalSession.value.world.combat?.monster.id;
     const began = options.monotonicNow();
-    const advanced = advanceSession(canonicalSession.value, options.content, amount, segment.speed, { collectCombatEvents: segment.collect });
+    const advanced = advanceSession(canonicalSession.value, options.content, amount * segment.scale, segment.speed, { collectCombatEvents: segment.collect });
     const duration = options.monotonicNow() - began;
     if (maxChunkMs > 1000) chunkMs = Math.max(1000, Math.min(maxChunkMs, duration > 8 ? Math.floor(chunkMs / 2) : chunkMs + 1000));
     canonicalSession.value = advanced.state; accountedAt += amount;
@@ -122,7 +125,7 @@ export function createGameRuntime(options: RuntimeOptions) {
         observedAt = accountedAt = loaded.envelope.savedAtMs;
         canonicalSession.value = loaded.envelope.session;
         if (loaded.envelope.pending?.length) {
-          segments.push(...loaded.envelope.pending.map(segment => ({ ...segment, collect: false })));
+          segments.push(...loaded.envelope.pending.map(segment => ({ ...segment, collect: false, scale: 1 })));
           observedAt = segments.at(-1)!.end;
           progress.value = { completedMs: 0, totalMs: observedAt - accountedAt };
         }
@@ -161,6 +164,12 @@ export function createGameRuntime(options: RuntimeOptions) {
   async function tick() {
     if (!started.value || loading.value || !owned()) return;
     try { capture(visible ? 'watched' : 'unwatched', visible); await pump(); } catch (error) { fail(error); }
+  }
+  /** Close the current segment at the old scale so the new multiplier applies only from now on. */
+  function setTimeScale(value: number) {
+    if (!Number.isSafeInteger(value) || value < 0 || value > 16 || value === timeScale.value) return;
+    if (started.value && !loading.value && owned()) capture(visible ? 'watched' : 'unwatched', visible);
+    timeScale.value = value;
   }
   async function setVisible(value: boolean) {
     if (value === visible) return;
@@ -203,6 +212,6 @@ export function createGameRuntime(options: RuntimeOptions) {
     pageHide(); stopped = true; generation++; forecast.value = null; status.value = 'stopped';
     options.forecast?.dispose(); options.ownership.release();
   }
-  return { canonicalSession, loading, catchingUp, status, progress, errors, forecast, combatLog, combatSummary, profile, started, startGame, start, tick, setVisible, userAction, requestForecast, flush, pageHide, stop };
+  return { canonicalSession, loading, catchingUp, status, progress, errors, forecast, combatLog, combatSummary, profile, started, timeScale, setTimeScale, startGame, start, tick, setVisible, userAction, requestForecast, flush, pageHide, stop };
 }
 export type GameRuntime = ReturnType<typeof createGameRuntime>;

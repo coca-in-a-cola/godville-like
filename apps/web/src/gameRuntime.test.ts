@@ -24,6 +24,18 @@ function store(storage: StoragePort, session = createSession(gameData, 42), save
 }
 
 describe('headless runtime acceptance', () => {
+  it('applies dev time scale only from the moment it changes, and pauses at 0', async () => {
+    const h = harness(); await h.runtime.start();
+    h.setTime(100100); h.runtime.setTimeScale(4);
+    h.setTime(100300); await h.runtime.tick();
+    let expected = advanceSession(createSession(gameData, 42), gameData, 100, 'watched').state;
+    expected = advanceSession(expected, gameData, 800, 'watched').state;
+    expect(h.runtime.canonicalSession.value).toEqual(expected);
+    h.runtime.setTimeScale(0); h.setTime(105000); await h.runtime.tick();
+    expect(h.runtime.canonicalSession.value!.realElapsedMs).toBe(expected.realElapsedMs);
+    h.runtime.setTimeScale(17);
+    expect(h.runtime.timeScale.value).toBe(0);
+  });
   it('releases the empty-start mutex and advances every later tick', async () => {
     const h = harness(); await h.runtime.start();
     h.setTime(100123); await h.runtime.tick();

@@ -1,29 +1,48 @@
-import { inventoryStats, worldZone, type SessionState } from '@godville/sim';
-import { gameData, translator as t } from '../gameData.ts';
-import { n, contentName, questName } from '../viewFormat.ts';
-import type { Act } from '../gameView.tsx';
-import { InventoryPanel } from './InventoryPanel.tsx';
+import { inventoryStats, type SessionState } from '@godville/sim';
+import { translator as t } from '../gameData.ts';
+import type { PlayerProfile } from '../sessionSchema.ts';
+import { n, passportLine } from '../viewFormat.ts';
 export function Meter({ label, value, max, text, kind = '' }: { label: string; value: number; max: number; text: string; kind?: string }) {
   return <div class={`ledger-meter ${kind}`} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={value}><span class="meter-fill" style={{ width: `${Math.max(0, Math.min(100, value / Math.max(1,max) * 100))}%` }} /><span class="meter-label">{text}</span></div>;
 }
-export function HeroPanel({ session: s, act, disabled }: { session: SessionState; act: Act; disabled: boolean }) {
-  const w = s.world, h = w.hero, st = h.stats, raw = inventoryStats(h.base, h.inventory);
-  const rows = [
-    ['maxHp', t.hp(st.maxHp), '—', n(raw.maxHp)],
-    ['damage', `${n(st.damageMin)}–${n(st.damageMax)}`, '—', `${n(raw.damageMin)}–${n(raw.damageMax)}`],
-    ['attackSpeed', n(st.attackSpeedBp / 100), '200%', n(raw.attackSpeed)],
-    ['defense', n(st.defense), '—', n(raw.defense)],
-    ['crit', n(st.critBp / 100), '50%', n(raw.crit)],
-    ['evasion', n(st.evasionBp / 100), '60%', n(raw.evasion)],
-    ['regen', n(st.regenMilliHp / 1000), '—', n(raw.regen)],
-    ['vampirism', n(st.vampirismBp / 100), '30%', n(raw.vampirism)],
-    ['counter', n(st.counterBp / 100), '40%', n(raw.counter)],
+const PORTRAIT_HUES = [28, 140, 205, 265, 345, 55];
+export function Portrait({ profile }: { profile: PlayerProfile }) {
+  const index = Math.max(0, Number(profile.portraitId.replace(/\D/g, '')) - 1) % PORTRAIT_HUES.length;
+  return <span class="portrait" role="img" aria-label={t.t('ui.portraitAlt', { hero: profile.heroName })} style={`--portrait-hue:${PORTRAIT_HUES[index]!}`}>{profile.heroName.trim().charAt(0).toUpperCase()}</span>;
+}
+export function HeroCard({ session: s, profile }: { session: SessionState; profile: PlayerProfile }) {
+  const h = s.world.hero;
+  return <section class="card hero-card"><h2 class="card-title">{t.t('ui.heroTitle')}</h2>
+    <div class="hero-head"><Portrait profile={profile} /><div><h3 class="hero-name">{profile.heroName}</h3><p class="passport"><span class="eyebrow">{t.t('ui.passport')}</span> {passportLine(s)}</p></div></div>
+    <p class="phase">{t.t(`phase.${s.world.phase}`)}</p>
+    <dl class="facts"><dt>{t.t('ui.alignment')}</dt><dd class="num">{n(h.alignment)}</dd><dt>{t.t('ui.courage')}</dt><dd class="num">{t.number(h.courage, { style: 'percent' })}</dd><dt>{t.t('ui.gold')}</dt><dd class="num">{n(h.gold)}</dd><dt>{t.t('ui.faith')}</dt><dd class="num">{n(s.world.faith)}</dd></dl>
+  </section>;
+}
+export function StatusCard({ session: s }: { session: SessionState }) {
+  const h = s.world.hero, g = s.world.god, q = h.quest;
+  return <section class="card status-card"><h2 class="card-title">{t.t('ui.status')}</h2>
+    <Meter label={t.t('ui.hp')} value={h.hp} max={h.stats.maxHp} text={t.t('hp.value', { hp: t.hp(h.hp), max: t.hp(h.stats.maxHp) })} kind="health" />
+    <Meter label={t.t('ui.godpower')} value={g.gp} max={g.gpMax} text={t.t('god.gp', { gp: g.gp, max: g.gpMax })} kind="godpower" />
+    <Meter label={t.t('ui.quest')} value={q?.progress ?? 0} max={100} text={q ? t.t('ui.questMeter', { value: n(q.progress) }) : t.t('ui.questNone')} kind="quest" />
+    <Meter label={t.t('ui.xp')} value={h.xp} max={h.nextLevelXp} text={t.t('ui.xpValue', { xp: n(h.xp), max: n(h.nextLevelXp) })} kind="xp" />
+  </section>;
+}
+export function StatsCard({ session: s }: { session: SessionState }) {
+  const h = s.world.hero, st = h.stats, raw = inventoryStats(h.base, h.inventory);
+  const pct = (bp: number) => t.t('ui.percent', { value: n(bp / 100) });
+  const rows: [string, string, string, number | null][] = [
+    ['stat.maxHp', t.hp(st.maxHp), n(raw.maxHp), null],
+    ['ui.damage', `${n(st.damageMin)}–${n(st.damageMax)}`, `${n(raw.damageMin)}–${n(raw.damageMax)}`, null],
+    ['stat.attackSpeed', pct(st.attackSpeedBp), n(raw.attackSpeed), 200],
+    ['stat.defense', n(st.defense), n(raw.defense), null],
+    ['stat.crit', pct(st.critBp), n(raw.crit), 50],
+    ['stat.evasion', pct(st.evasionBp), n(raw.evasion), 60],
+    ['stat.regen', n(st.regenMilliHp / 1000), n(raw.regen), null],
+    ['stat.vampirism', pct(st.vampirismBp), n(raw.vampirism), 30],
+    ['stat.counter', pct(st.counterBp), n(raw.counter), 40],
   ];
-  return <><section class="sheet"><p class="eyebrow">{t.t('ui.heroSheet')}</p><h2>{t.t('ui.heroName')}</h2><p class="phase">{t.t(`phase.${w.phase}`)} · {t.t('ui.level', { level: h.level })}</p>
-    <Meter label={t.t('ui.hp')} value={h.hp} max={st.maxHp} text={t.t('hp.value', { hp: t.hp(h.hp), max: t.hp(st.maxHp) })} kind="health" />
-    <Meter label={t.t('ui.xp')} value={h.xp} max={h.nextLevelXp} text={t.t('ui.xpValue', { xp: n(h.xp), max: n(h.nextLevelXp) })} />
-    <dl class="facts"><dt>{t.t('ui.gold')}</dt><dd>{n(h.gold)}</dd><dt>{t.t('ui.faith')}</dt><dd>{n(w.faith)}</dd><dt>{t.t('ui.town')}</dt><dd>{contentName('towns', h.currentTownId)}</dd><dt>{t.t('ui.road')}</dt><dd>{t.t('ui.distance', { distance: n(h.distance), zone: worldZone(w, gameData) })}</dd><dt>{t.t('ui.courage')}</dt><dd>{t.number(h.courage, { style: 'percent' })}</dd><dt>{t.t('ui.alignment')}</dt><dd>{n(h.alignment)}</dd></dl>
-    <h3>{t.t('ui.quest')}</h3><p>{h.quest ? questName(h.quest.id) : t.t('ui.noQuest')}</p>{h.quest && <Meter label={t.t('ui.quest')} value={h.quest.progress} max={100} text={t.t('ui.percent', { value: n(h.quest.progress) })} />}
-    <h3>{t.t('ui.stats')}</h3><p class="hint">{t.t('ui.statsHint')}</p><table><thead><tr><th>{t.t('ui.stat')}</th><th>{t.t('ui.effective')}</th><th>{t.t('ui.raw')}</th><th>{t.t('ui.cap')}</th></tr></thead><tbody>{rows.map(([key, value, cap, total]) => <tr key={key}><th scope="row">{t.t(key === 'damage' ? 'ui.damage' : `stat.${key}`)}</th><td>{value}</td><td>{total}</td><td>{cap}</td></tr>)}</tbody></table>
-  </section><InventoryPanel session={s} act={act} disabled={disabled} /></>;
+  return <section class="card stats-card"><h2 class="card-title">{t.t('ui.characteristics')}</h2>
+    <dl class="stat-block">{rows.map(([key, value, total, cap]) => <div class="stat-cell" key={key} title={`${t.t('ui.raw')} ${total}`}><dt>{t.t(key)}</dt><dd class="num">{value}</dd>{cap !== null && <dd class="stat-cap">{t.t('stat.cap', { cap })}</dd>}</div>)}</dl>
+    <p class="hint">{t.t('ui.statsHint')}</p>
+  </section>;
 }
