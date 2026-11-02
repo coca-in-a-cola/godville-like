@@ -59,12 +59,30 @@ export const modifierRow = z.strictObject({
   name_en: name,
 });
 
+export const balanceRow = z.strictObject({
+  family: z.enum(MONSTER_FAMILIES),
+  interval_seconds: decimal,
+  damage_multiplier: decimal,
+  defense_multiplier: decimal,
+  evasion: nonNegativeInt,
+  vampirism: nonNegativeInt,
+  crit: nonNegativeInt,
+  hp_base: decimal,
+  hp_per_level: decimal,
+  damage_min_base: decimal,
+  damage_min_per_level: decimal,
+  damage_max_base: decimal,
+  damage_max_per_level: decimal,
+  defense_per_level: decimal,
+});
+
 export const DATA_SCHEMAS = {
   monsters: monsterRow,
   towns: townRow,
   trophies: trophyRow,
   bases: baseRow,
   modifiers: modifierRow,
+  balance: balanceRow,
 } as const;
 
 export type DataFileName = keyof typeof DATA_SCHEMAS;
@@ -75,6 +93,7 @@ export type TownRow = z.output<typeof townRow>;
 export type TrophyRow = z.output<typeof trophyRow>;
 export type BaseRow = z.output<typeof baseRow>;
 export type ModifierRow = z.output<typeof modifierRow>;
+export type BalanceRow = z.output<typeof balanceRow>;
 
 export interface DataRows {
   monsters: MonsterRow;
@@ -82,4 +101,5 @@ export interface DataRows {
   trophies: TrophyRow;
   bases: BaseRow;
   modifiers: ModifierRow;
+  balance: BalanceRow;
 }

@@ -1,0 +1,6 @@
+family,interval_seconds,damage_multiplier,defense_multiplier,evasion,vampirism,crit,hp_base,hp_per_level,damage_min_base,damage_min_per_level,damage_max_base,damage_max_per_level,defense_per_level
+spider,1.2,0.8,1,0,0,0,50,20,4,1.8,6,2.6,0.8
+golem,2.4,1,2,0,0,0,50,20,4,1.8,6,2.6,0.8
+wraith,1.5,1,1,15,0,0,50,20,4,1.8,6,2.6,0.8
+leech,1.8,1,1,0,15,0,50,20,4,1.8,6,2.6,0.8
+brute,2.0,1,1,0,0,15,50,20,4,1.8,6,2.6,0.8

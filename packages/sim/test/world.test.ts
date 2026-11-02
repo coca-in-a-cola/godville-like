@@ -186,9 +186,9 @@ describe('autonomous world routes', () => {
     expect(s.hero.inventory.bag.length).toBeLessThanOrEqual(10); expect(s.hero.inventory.trophies.length).toBeLessThanOrEqual(10);
     expect(s.god).toEqual(start.god); finiteTree(s);
     if (seed === 123) {
-      expect(s.totals).toEqual({ kills: 84, deaths: 0, quests: 33, miles: 286, fled: 0 });
+      expect(s.totals).toEqual({ kills: 82, deaths: 0, quests: 32, miles: 275, fled: 0 });
       expect(s.hero.level).toBe(11); expect(s.hero.currentTownId).toBe('tradeburg');
-      expect(s.phase).toBe('return'); expect(s.hero.distance).toBe(4); expect(s.nextEventSeq).toBe(874);
+      expect(s.phase).toBe('return'); expect(s.hero.distance).toBe(7); expect(s.nextEventSeq).toBe(848);
     }
   });
 

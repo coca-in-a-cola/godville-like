@@ -21,7 +21,7 @@ const seed = number(options['--seed'] ?? '20261027');
 const trials = number(options['--trials'] ?? '10000');
 const maxTicks = number(options['--max-ticks'] ?? '6000');
 const csv = (name: string) => readFileSync(new URL(`../data/${name}.csv`, import.meta.url), 'utf8');
-const data = loadGameData({ bases: csv('bases'), modifiers: csv('modifiers'), monsters: csv('monsters'), towns: csv('towns'), trophies: csv('trophies') });
+const data = loadGameData({ bases: csv('bases'), modifiers: csv('modifiers'), monsters: csv('monsters'), towns: csv('towns'), trophies: csv('trophies'), balance: csv('balance') });
 const measurements = zones.map((zone) => {
   const loadout = balanceLoadout(data, zone, seed);
   const started = performance.now();

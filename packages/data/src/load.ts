@@ -76,12 +76,16 @@ export function parseTable<F extends DataFileName>(
       return;
     }
     const row = result.data as DataRows[F];
-    const firstLine = seen.get(row.id);
-    if (firstLine !== undefined) {
-      issues.push({ file: fileName, line, column: 'id', message: `duplicate id "${row.id}" (first on line ${firstLine})` });
-      return;
+    const key = 'id' in row ? (row as { id: string }).id : 'family' in row ? (row as { family: string }).family : undefined;
+    if (key !== undefined) {
+      const col = 'id' in row ? 'id' : 'family';
+      const firstLine = seen.get(key);
+      if (firstLine !== undefined) {
+        issues.push({ file: fileName, line, column: col, message: `duplicate ${col} "${key}" (first on line ${firstLine})` });
+        return;
+      }
+      seen.set(key, line);
     }
-    seen.set(row.id, line);
     rows.push(row);
   });
 

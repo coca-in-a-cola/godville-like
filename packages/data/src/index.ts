@@ -6,6 +6,8 @@ export {
   MODIFIER_POSITIONS,
   MONSTER_FAMILIES,
   type BaseRow,
+  type BalanceRow,
+  balanceRow,
   type DataFileName,
   type DataRows,
   type ModifierRow,

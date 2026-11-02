@@ -7,18 +7,18 @@ describe('monster formulas and seeded content selection', () => {
   it.each(families)('%s follows exact level formulas and the family interval contract', (family) => {
     for (const level of [0, 1, 10, 20]) {
       const tuning = DEFAULT_FAMILY_TUNING[family]; const stats = monsterStats(level, family);
-      expect(stats.maxHp).toBe(40 + 18 * level);
-      expect(stats.damageMin).toBe((3 + 1.5 * level) * tuning.damageMultiplier);
-      expect(stats.damageMax).toBe((5 + 2.5 * level) * tuning.damageMultiplier);
-      expect(stats.defense).toBe(0.6 * level * tuning.defenseMultiplier);
+      expect(stats.maxHp).toBe(50 + 20 * level);
+      expect(stats.damageMin).toBe((4 + 1.8 * level) * tuning.damageMultiplier);
+      expect(stats.damageMax).toBe((6 + 2.6 * level) * tuning.damageMultiplier);
+      expect(stats.defense).toBe(0.8 * level * tuning.defenseMultiplier);
       expect(1.5 / (1 + stats.attackSpeed / 100)).toBeCloseTo(tuning.intervalSeconds);
       expect(tuning.intervalSeconds).toBeGreaterThanOrEqual(1.2); expect(tuning.intervalSeconds).toBeLessThanOrEqual(2.4);
       expect(stats).toMatchObject({ crit: tuning.crit, evasion: tuning.evasion, vampirism: tuning.vampirism, counter: 0, regen: 0 });
     }
   });
   it('retains the explicit family differences', () => {
-    expect(monsterStats(10, 'spider').damageMax).toBe(24);
-    expect(monsterStats(10, 'golem').defense).toBe(12);
+    expect(monsterStats(10, 'spider').damageMax).toBe(25.6);
+    expect(monsterStats(10, 'golem').defense).toBe(16);
     expect(monsterStats(10, 'wraith').evasion).toBe(15);
     expect(monsterStats(10, 'leech').vampirism).toBe(15);
     expect(monsterStats(10, 'brute').crit).toBe(15);
