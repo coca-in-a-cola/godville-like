@@ -40,18 +40,9 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
   const isCatchingUp = r ? r.catchingUp.value : false;
   const [, setAssetsLoaded] = useState(0);
 
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-    media.addEventListener('change', handler);
-    return () => media.removeEventListener('change', handler);
-  }, []);
+  const isFastForwarding = timeScale > 1 || isCatchingUp;
+  const isPaused = timeScale === 0;
+  const isStaticFrame = isFastForwarding || isPaused;
 
   // Preload all scene sprite assets on mount
   useEffect(() => {
@@ -59,10 +50,6 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       getAsset(name, () => setAssetsLoaded((c) => c + 1));
     }
   }, []);
-
-  const isFastForwarding = timeScale > 1 || isCatchingUp;
-  const isPaused = timeScale === 0;
-  const isStaticFrame = isFastForwarding || prefersReducedMotion || isPaused;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -257,6 +244,15 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       const heroX = 96 + (isStaticFrame ? 0 : heroLunge);
       const monsterX = 214 + (isStaticFrame ? 0 : monsterLunge);
 
+      // Contact shadows
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(heroX, GROUND_Y - 1, 12, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(monsterX, GROUND_Y - 1, 12, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
       // Draw Hero Combat Sprite
       drawHeroSprite(ctx, heroX, GROUND_Y, heroAction, false, 0, heroInk);
 
@@ -314,6 +310,13 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       const walkFrame = isStaticFrame ? 0 : Math.floor((dist * 4) % 4);
       const isReturning = phase === 'return';
       const heroX = isReturning ? 180 : 130;
+
+      // Contact shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(heroX, GROUND_Y - 1, 12, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
       drawHeroSprite(ctx, heroX, GROUND_Y, 'walk', isReturning, walkFrame, heroInk);
     }
 
@@ -326,32 +329,24 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       ctx.textAlign = 'center';
       const label = isPaused
         ? '⏸ Paused'
-        : prefersReducedMotion
-        ? 'Reduced motion'
         : '⚡ Fast-forwarding…';
       ctx.fillText(label, SCENE_W / 2, 13);
       ctx.textAlign = 'left';
     }
 
-  }, [s, currentTheme, timeScale, isCatchingUp, prefersReducedMotion, isPaused, isStaticFrame, r]);
+  }, [s, currentTheme, timeScale, isCatchingUp, isPaused, isStaticFrame, r]);
 
   return (
-    <section class="card scene-card">
-      <div class="scene-header">
-        <h2 class="card-title">{t.t('ui.scene')}</h2>
-        <span class="scene-badge num">{isFastForwarding ? '⚡ Fast' : `${timeScale}×`}</span>
-      </div>
-      <div class="canvas-wrapper">
-        <canvas
-          ref={canvasRef}
-          class="scene-canvas"
-          width={SCENE_W}
-          height={SCENE_H}
-          role="img"
-          aria-label={t.t('ui.sceneLabel', { phase: t.t(`phase.${s.world.phase}`) })}
-        />
-      </div>
-    </section>
+    <div class="scene-viewport">
+      <canvas
+        ref={canvasRef}
+        class="scene-canvas"
+        width={SCENE_W}
+        height={SCENE_H}
+        role="img"
+        aria-label={t.t('ui.sceneLabel', { phase: t.t(`phase.${s.world.phase}`) })}
+      />
+    </div>
   );
 }
 

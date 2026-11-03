@@ -49,7 +49,9 @@ html[data-theme] body{margin:0;background:var(--paper);color:var(--ink);font:14p
 .attack-meter{height:8px}.attack-meter .meter-label{display:none}.attack-meter .meter-fill{background:var(--attack);opacity:.7}
 .stat-block{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:0}
 .stat-cell{background:var(--sheet);padding:6px 6px 5px;min-width:0}.stat-cell dt{font-size:11px;color:var(--muted);line-height:1.2;overflow-wrap:anywhere}.stat-cell dd{margin:2px 0 0;font-size:14px}.stat-cell .stat-cap{font-size:10px;color:var(--muted)}
-.scene{display:block;width:100%;max-width:320px;aspect-ratio:320/96;margin:0 auto}
+/* Seamless Edge-to-Edge Pixel Viewport */
+.scene-viewport{width:100%;aspect-ratio:320/96;background:#000000;border:1px solid var(--rule);border-radius:3px;overflow:hidden;position:relative;margin-bottom:12px;box-shadow:inset 0 0 10px rgba(0,0,0,0.5)}
+.scene-canvas{display:block;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;image-rendering:crisp-edges}
 
 .ledger .quest-name{font-size:16px;margin:0 0 4px}.narrative{font-style:italic}
 .duel{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ledger .duelist h3{font-size:14px;margin:0 0 4px;overflow-wrap:anywhere}
