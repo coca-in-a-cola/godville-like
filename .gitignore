@@ -33,3 +33,8 @@ credentials*.json
 .DS_Store
 .idea/
 .vscode/
+
+# python virtual environments & cache
+.venv/
+__pycache__/
+*.pyc

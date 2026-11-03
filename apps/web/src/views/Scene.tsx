@@ -8,11 +8,37 @@ export const SCENE_W = 320;
 export const SCENE_H = 96;
 const GROUND_Y = 74;
 
+const SCENE_ASSETS = [
+  'bg_sky.png', 'bg_hills.png', 'bg_forest.png', 'bg_road.png',
+  'building_tavern.png', 'building_shop.png', 'building_temple.png', 'building_inn.png',
+  'hero_walk.png', 'hero_attack.png', 'hero_hit.png', 'hero_death.png',
+  'monster_spider_idle.png', 'monster_golem_idle.png', 'monster_wraith_idle.png',
+  'monster_leech_idle.png', 'monster_brute_idle.png'
+];
+
+const imageCache = new Map<string, HTMLImageElement>();
+
+function getAsset(name: string, onLoaded?: () => void): HTMLImageElement | null {
+  if (typeof window === 'undefined') return null;
+  const src = `./assets/${name}`;
+  let img = imageCache.get(src);
+  if (!img) {
+    img = new Image();
+    img.src = src;
+    img.onload = () => {
+      onLoaded?.();
+    };
+    imageCache.set(src, img);
+  }
+  return img.complete && img.naturalWidth > 0 ? img : null;
+}
+
 export function SceneCard({ session: s, runtime: r }: { session: SessionState; runtime?: GameRuntime }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const currentTheme = theme.value;
   const timeScale = r ? r.timeScale.value : 1;
   const isCatchingUp = r ? r.catchingUp.value : false;
+  const [, setAssetsLoaded] = useState(0);
 
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -27,6 +53,13 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
     return () => media.removeEventListener('change', handler);
   }, []);
 
+  // Preload all scene sprite assets on mount
+  useEffect(() => {
+    for (const name of SCENE_ASSETS) {
+      getAsset(name, () => setAssetsLoaded((c) => c + 1));
+    }
+  }, []);
+
   const isFastForwarding = timeScale > 1 || isCatchingUp;
   const isPaused = timeScale === 0;
   const isStaticFrame = isFastForwarding || prefersReducedMotion || isPaused;
@@ -39,7 +72,7 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
 
     ctx.imageSmoothingEnabled = false;
 
-    // Palette Colors (32-color DB32 / Godville standard)
+    // Palette Colors (32-color DB32 standard)
     const isDark = currentTheme === 'dark';
     const skyColor = isDark ? '#151620' : '#c8daf4';
     const hillFarColor = isDark ? '#252636' : '#94b3c8';
@@ -52,94 +85,114 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
     const damageRed = '#d95763';
     const whiteColor = '#ffffff';
 
-    // Clear background
-    ctx.fillStyle = skyColor;
-    ctx.fillRect(0, 0, SCENE_W, SCENE_H);
-
     const w = s.world;
     const phase = w.phase;
     const dist = w.hero.distance;
 
-    // 1. Far Hills Parallax
-    ctx.fillStyle = hillFarColor;
-    ctx.beginPath();
-    const farOffset = (dist * 2) % 320;
-    ctx.moveTo(0, SCENE_H);
-    for (let x = 0; x <= SCENE_W; x += 8) {
-      const y = 46 + Math.sin((x + farOffset) / 36) * 10;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(SCENE_W, SCENE_H);
-    ctx.closePath();
-    ctx.fill();
-
-    // 2. Near Hills / Forest Parallax
-    ctx.fillStyle = hillNearColor;
-    ctx.beginPath();
-    const nearOffset = (dist * 6) % 320;
-    ctx.moveTo(0, SCENE_H);
-    for (let x = 0; x <= SCENE_W; x += 6) {
-      const y = 58 + Math.sin((x + nearOffset) / 22) * 8;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(SCENE_W, SCENE_H);
-    ctx.closePath();
-    ctx.fill();
-
-    // 3. Ground & Road
-    ctx.fillStyle = groundColor;
-    ctx.fillRect(0, GROUND_Y, SCENE_W, SCENE_H - GROUND_Y);
-    ctx.fillStyle = roadColor;
-    ctx.fillRect(0, GROUND_Y + 4, SCENE_W, 12);
-
-    // Road dashed line
-    ctx.fillStyle = isDark ? '#4a463d' : '#8c7d5c';
-    const dashOffset = (dist * 12) % 24;
-    for (let x = -24; x < SCENE_W + 24; x += 24) {
-      ctx.fillRect(x - dashOffset, GROUND_Y + 9, 12, 2);
+    // 1. Layer 0: Sky
+    const skyImg = getAsset('bg_sky.png');
+    if (skyImg) {
+      ctx.drawImage(skyImg, 0, 0, SCENE_W, SCENE_H);
+    } else {
+      ctx.fillStyle = skyColor;
+      ctx.fillRect(0, 0, SCENE_W, SCENE_H);
     }
 
-    // 4. Render Modes
-    if (phase === 'town') {
-      // Procedural Town Architecture (colors seeded by town id)
-      const townId = w.hero.currentTownId || 'godville';
-      const townPalettes: Record<string, { walls: string[]; roof: string; accent: string; window: string }> = {
-        godville: { walls: ['#663931', '#8f563b', '#76428a', '#4b692f'], roof: '#ac3232', accent: '#222034', window: goldColor },
-        tradeburg: { walls: ['#306082', '#3f3f74', '#264e68', '#323c39'], roof: '#5b6ee1', accent: '#151620', window: '#d9a066' },
-        beerburgh: { walls: ['#45283c', '#524b24', '#663931', '#3a2230'], roof: '#df7126', accent: '#222034', window: '#fbf236' },
-        godvillewood: { walls: ['#323c39', '#4b692f', '#37946e', '#25352b'], roof: '#6abe30', accent: '#18241c', window: '#5fcde4' },
-      };
-      const pal = townPalettes[townId] ?? townPalettes.godville!;
-
-      const buildings = [
-        { x: 40, w: 44, h: 36, label: 'TAVERN', color: pal.walls[0]! },
-        { x: 100, w: 52, h: 42, label: 'MARKET', color: pal.walls[1]! },
-        { x: 170, w: 48, h: 48, label: 'TEMPLE', color: pal.walls[2]! },
-        { x: 236, w: 42, h: 34, label: 'INN', color: pal.walls[3]! },
-      ];
-      for (const b of buildings) {
-        ctx.fillStyle = b.color;
-        ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
-        // Roof
-        ctx.fillStyle = pal.roof;
-        ctx.beginPath();
-        ctx.moveTo(b.x - 4, GROUND_Y - b.h);
-        ctx.lineTo(b.x + b.w / 2, GROUND_Y - b.h - 10);
-        ctx.lineTo(b.x + b.w + 4, GROUND_Y - b.h);
-        ctx.closePath();
-        ctx.fill();
-        // Door & window
-        ctx.fillStyle = pal.accent;
-        ctx.fillRect(b.x + b.w / 2 - 4, GROUND_Y - 14, 8, 14);
-        ctx.fillStyle = pal.window;
-        ctx.fillRect(b.x + 6, GROUND_Y - b.h + 8, 6, 6);
-        ctx.fillRect(b.x + b.w - 12, GROUND_Y - b.h + 8, 6, 6);
+    // 2. Layer 1: Distant Hills Parallax
+    const hillsImg = getAsset('bg_hills.png');
+    if (hillsImg) {
+      const farOffset = Math.floor((dist * 2) % SCENE_W);
+      ctx.drawImage(hillsImg, -farOffset, 0, SCENE_W, SCENE_H);
+      ctx.drawImage(hillsImg, SCENE_W - farOffset, 0, SCENE_W, SCENE_H);
+    } else {
+      ctx.fillStyle = hillFarColor;
+      ctx.beginPath();
+      const farOffset = (dist * 2) % 320;
+      ctx.moveTo(0, SCENE_H);
+      for (let x = 0; x <= SCENE_W; x += 8) {
+        const y = 46 + Math.sin((x + farOffset) / 36) * 10;
+        ctx.lineTo(x, y);
       }
+      ctx.lineTo(SCENE_W, SCENE_H);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 3. Layer 2: Midground Forest Parallax
+    const forestImg = getAsset('bg_forest.png');
+    if (forestImg) {
+      const nearOffset = Math.floor((dist * 6) % SCENE_W);
+      ctx.drawImage(forestImg, -nearOffset, 0, SCENE_W, SCENE_H);
+      ctx.drawImage(forestImg, SCENE_W - nearOffset, 0, SCENE_W, SCENE_H);
+    } else {
+      ctx.fillStyle = hillNearColor;
+      ctx.beginPath();
+      const nearOffset = (dist * 6) % 320;
+      ctx.moveTo(0, SCENE_H);
+      for (let x = 0; x <= SCENE_W; x += 6) {
+        const y = 58 + Math.sin((x + nearOffset) / 22) * 8;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(SCENE_W, SCENE_H);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 4. Layer 3: Foreground Ground & Road
+    const roadImg = getAsset('bg_road.png');
+    if (roadImg) {
+      const roadOffset = Math.floor((dist * 16) % SCENE_W);
+      ctx.drawImage(roadImg, -roadOffset, 0, SCENE_W, SCENE_H);
+      ctx.drawImage(roadImg, SCENE_W - roadOffset, 0, SCENE_W, SCENE_H);
+    } else {
+      ctx.fillStyle = groundColor;
+      ctx.fillRect(0, GROUND_Y, SCENE_W, SCENE_H - GROUND_Y);
+      ctx.fillStyle = roadColor;
+      ctx.fillRect(0, GROUND_Y + 4, SCENE_W, 12);
+      ctx.fillStyle = isDark ? '#4a463d' : '#8c7d5c';
+      const dashOffset = (dist * 12) % 24;
+      for (let x = -24; x < SCENE_W + 24; x += 24) {
+        ctx.fillRect(x - dashOffset, GROUND_Y + 9, 12, 2);
+      }
+    }
+
+    // 5. Render Modes
+    if (phase === 'town') {
+      // Town Architecture: 4 detailed fantasy pixel-art buildings
+      const buildings = [
+        { x: 20, img: 'building_tavern.png', label: 'TAVERN', color: '#8f563b' },
+        { x: 92, img: 'building_shop.png', label: 'MARKET', color: '#5b6ee1' },
+        { x: 168, img: 'building_temple.png', label: 'TEMPLE', color: '#76428a' },
+        { x: 244, img: 'building_inn.png', label: 'INN', color: '#4b692f' },
+      ];
+
+      for (const b of buildings) {
+        const bImg = getAsset(b.img);
+        if (bImg) {
+          ctx.drawImage(bImg, b.x, GROUND_Y - 48, 48, 48);
+        } else {
+          // Fallback box
+          ctx.fillStyle = b.color;
+          ctx.fillRect(b.x + 4, GROUND_Y - 40, 40, 40);
+        }
+        // Small sign label
+        ctx.font = 'bold 7px monospace';
+        ctx.fillStyle = goldColor;
+        ctx.fillText(b.label, b.x + 8, GROUND_Y - 50);
+      }
+
       // Hero in town
-      drawHero(ctx, 150, GROUND_Y, 0, false, heroInk);
+      drawHeroSprite(ctx, 150, GROUND_Y, 'idle', false, 0, heroInk);
+
     } else if (phase === 'dead') {
-      // Tombstone
+      // Tombstone & fallen hero sprite
       const tombX = 148;
+      const deathImg = getAsset('hero_death.png');
+      if (deathImg) {
+        ctx.drawImage(deathImg, tombX - 24, GROUND_Y - 18, 32, 32);
+      }
+
+      // Tombstone stone
       ctx.fillStyle = '#696a6a';
       ctx.beginPath();
       ctx.moveTo(tombX, GROUND_Y);
@@ -160,6 +213,7 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       ctx.beginPath();
       ctx.arc(tombX + 12, soulY, 6, 0, Math.PI * 2);
       ctx.fill();
+
     } else if (phase === 'combat' && w.combat) {
       // Combat Mode
       const fight = w.combat.fight;
@@ -172,12 +226,18 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       let hasSmite = false;
       let floatText = '';
       let floatColor = damageRed;
+      let heroAction: 'idle' | 'attack' | 'hit' = 'idle';
 
       for (const entry of recentLog) {
         const ev = entry.event;
         if (ev.type === 'hit') {
-          if (ev.attacker === 'hero') heroLunge = 10;
-          else monsterLunge = -10;
+          if (ev.attacker === 'hero') {
+            heroLunge = 10;
+            heroAction = 'attack';
+          } else {
+            monsterLunge = -10;
+            heroAction = 'hit';
+          }
           hasHitFlash = true;
           floatText = `-${ev.dealt}`;
           if (ev.crit) {
@@ -197,11 +257,12 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       const heroX = 96 + (isStaticFrame ? 0 : heroLunge);
       const monsterX = 214 + (isStaticFrame ? 0 : monsterLunge);
 
-      // Draw Hero
-      drawHero(ctx, heroX, GROUND_Y, 1, false, heroInk);
+      // Draw Hero Combat Sprite
+      drawHeroSprite(ctx, heroX, GROUND_Y, heroAction, false, 0, heroInk);
 
-      // Draw Monster
-      drawMonster(ctx, monsterX, GROUND_Y, monsterFamily, isDark);
+      // Draw Monster Combat Sprite (64x32 2-frame sprite)
+      const monsterFrame = isStaticFrame ? 0 : Math.floor((dist * 3) % 2);
+      drawMonsterSprite(ctx, monsterX, GROUND_Y, monsterFamily, monsterFrame, isDark);
 
       // Hit flash overlay
       if (hasHitFlash && !isStaticFrame) {
@@ -253,10 +314,10 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
       const walkFrame = isStaticFrame ? 0 : Math.floor((dist * 4) % 4);
       const isReturning = phase === 'return';
       const heroX = isReturning ? 180 : 130;
-      drawHero(ctx, heroX, GROUND_Y, walkFrame, isReturning, heroInk);
+      drawHeroSprite(ctx, heroX, GROUND_Y, 'walk', isReturning, walkFrame, heroInk);
     }
 
-    // 5. Static Frame Overlay (Fast-forwarding… or Paused)
+    // 6. Static Frame Overlay (Fast-forwarding… or Paused)
     if (isStaticFrame) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
       ctx.fillRect(0, 0, SCENE_W, 20);
@@ -294,42 +355,99 @@ export function SceneCard({ session: s, runtime: r }: { session: SessionState; r
   );
 }
 
-function drawHero(ctx: CanvasRenderingContext2D, x: number, y: number, frame: number, flip: boolean, ink: string) {
+function drawHeroSprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  mode: 'walk' | 'attack' | 'hit' | 'death' | 'idle',
+  flip: boolean,
+  frame: number = 0,
+  ink: string = '#221f1a'
+) {
+  ctx.save();
+  if (flip) {
+    ctx.translate(x, y);
+    ctx.scale(-1, 1);
+    ctx.translate(-x, -y);
+  }
+
+  let imgName: string;
+  let sx: number;
+  if (mode === 'attack') {
+    imgName = 'hero_attack.png';
+    sx = (frame % 2) * 32;
+  } else if (mode === 'hit') {
+    imgName = 'hero_hit.png';
+    sx = 0;
+  } else if (mode === 'death') {
+    imgName = 'hero_death.png';
+    sx = 0;
+  } else if (mode === 'walk') {
+    imgName = 'hero_walk.png';
+    sx = (frame % 4) * 32;
+  } else {
+    imgName = 'hero_walk.png';
+    sx = 0;
+  }
+
+  const img = getAsset(imgName);
+  if (img) {
+    ctx.drawImage(img, sx, 0, 32, 32, x - 16, y - 32, 32, 32);
+  } else {
+    // Vector fallback
+    drawHeroFallback(ctx, x - 8, y, frame, flip, ink);
+  }
+  ctx.restore();
+}
+
+function drawMonsterSprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  family: string,
+  frame: number = 0,
+  isDark: boolean = false
+) {
+  ctx.save();
+  const imgName = `monster_${family}_idle.png`;
+  const img = getAsset(imgName);
+  if (img) {
+    const sx = (frame % 2) * 32;
+    ctx.drawImage(img, sx, 0, 32, 32, x - 16, y - 32, 32, 32);
+  } else {
+    drawMonsterFallback(ctx, x - 10, y, family, isDark);
+  }
+  ctx.restore();
+}
+
+function drawHeroFallback(ctx: CanvasRenderingContext2D, x: number, y: number, frame: number, flip: boolean, ink: string) {
   ctx.save();
   if (flip) {
     ctx.translate(x + 16, y);
     ctx.scale(-1, 1);
     ctx.translate(-x - 16, -y);
   }
-
-  // Cloak / Body
+  // Cloak
   ctx.fillStyle = '#3f3f74';
   ctx.fillRect(x + 2, y - 24, 12, 14);
-
   // Head
   ctx.fillStyle = '#eecc9a';
   ctx.fillRect(x + 4, y - 32, 8, 8);
-
-  // Helmet / Hair
+  // Hair / helmet
   ctx.fillStyle = '#8f563b';
   ctx.fillRect(x + 3, y - 34, 10, 4);
-
-  // Legs walk cycle
+  // Legs
   ctx.fillStyle = ink;
   const legOffset = frame === 1 ? 3 : frame === 3 ? -3 : 0;
   ctx.fillRect(x + 4 - legOffset, y - 10, 3, 10);
   ctx.fillRect(x + 9 + legOffset, y - 10, 3, 10);
-
   // Sword
   ctx.fillStyle = '#cbbdb8';
   ctx.fillRect(x + 14, y - 26, 2, 16);
-  ctx.fillStyle = '#d9a066';
-  ctx.fillRect(x + 12, y - 20, 6, 2);
-
   ctx.restore();
 }
 
-function drawMonster(ctx: CanvasRenderingContext2D, x: number, y: number, family: string, isDark: boolean) {
+function drawMonsterFallback(ctx: CanvasRenderingContext2D, x: number, y: number, family: string, isDark: boolean) {
   ctx.save();
   switch (family) {
     case 'spider':
@@ -337,35 +455,16 @@ function drawMonster(ctx: CanvasRenderingContext2D, x: number, y: number, family
       ctx.beginPath();
       ctx.arc(x + 10, y - 12, 8, 0, Math.PI * 2);
       ctx.fill();
-      // Eyes
       ctx.fillStyle = '#fbf236';
       ctx.fillRect(x + 6, y - 14, 2, 2);
       ctx.fillRect(x + 10, y - 14, 2, 2);
-      // Legs
-      ctx.strokeStyle = isDark ? '#df7126' : '#222034';
-      ctx.lineWidth = 1.5;
-      for (const lx of [-6, -2, 2, 6]) {
-        ctx.beginPath();
-        ctx.moveTo(x + 10, y - 10);
-        ctx.lineTo(x + 10 + lx * 2, y);
-        ctx.stroke();
-      }
       break;
-
     case 'golem':
       ctx.fillStyle = '#696a6a';
       ctx.fillRect(x, y - 28, 20, 26);
       ctx.fillStyle = '#847e87';
       ctx.fillRect(x + 2, y - 26, 16, 12);
-      ctx.fillStyle = '#595652';
-      ctx.fillRect(x + 4, y - 8, 4, 8);
-      ctx.fillRect(x + 12, y - 8, 4, 8);
-      // Eye glow
-      ctx.fillStyle = '#5fcde4';
-      ctx.fillRect(x + 6, y - 22, 3, 2);
-      ctx.fillRect(x + 11, y - 22, 3, 2);
       break;
-
     case 'wraith':
       ctx.fillStyle = 'rgba(118, 66, 138, 0.8)';
       ctx.beginPath();
@@ -375,34 +474,17 @@ function drawMonster(ctx: CanvasRenderingContext2D, x: number, y: number, family
       ctx.lineTo(x + 2, y - 2);
       ctx.closePath();
       ctx.fill();
-      // Eyes
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(x + 6, y - 22, 2, 2);
-      ctx.fillRect(x + 10, y - 22, 2, 2);
       break;
-
     case 'leech':
       ctx.fillStyle = '#45283c';
       ctx.beginPath();
       ctx.ellipse(x + 10, y - 10, 12, 6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#ac3232';
-      ctx.beginPath();
-      ctx.arc(x + 3, y - 10, 3, 0, Math.PI * 2);
-      ctx.fill();
       break;
-
     case 'brute':
     default:
       ctx.fillStyle = '#8f563b';
       ctx.fillRect(x, y - 26, 18, 22);
-      ctx.fillStyle = '#222034';
-      ctx.fillRect(x + 3, y - 22, 3, 2);
-      ctx.fillRect(x + 10, y - 22, 3, 2);
-      // Horns
-      ctx.fillStyle = '#fbf236';
-      ctx.fillRect(x + 1, y - 30, 3, 4);
-      ctx.fillRect(x + 14, y - 30, 3, 4);
       break;
   }
   ctx.restore();
